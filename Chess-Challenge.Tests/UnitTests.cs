@@ -16,63 +16,44 @@ public class UnitTests
         Console.WriteLine("Original genome:");
         PrintGenome(genome);
 
-        // Mutate the weights
-        mutationOperator.MutateWeights(genome, 0.7, 0.2);
-        Console.WriteLine("After weight mutation:");
-        PrintGenome(genome);
-        
-        // Add a new node
-        mutationOperator.AddNodeMutation(genome);
-        Console.WriteLine("After node addition:");
-        PrintGenome(genome);
-        
-        // Add a new node
-        mutationOperator.AddNodeMutation(genome);
-        Console.WriteLine("After node addition:");
-        PrintGenome(genome);
+        Random random = new Random(3);
+        int numMutations = random.Next(10, 30); // Randomly choose between 1 and 10 mutations
 
-        // Add a new connection
-        var res_addconn1 = mutationOperator.AddConnectionMutation(genome, -1, 1);
-        Console.WriteLine("After connection addition:");
-        PrintGenome(genome);
-        
-        // Add a new connection
-        var res_addconn2 = mutationOperator.AddConnectionMutation(genome, -1, 1);
-        Console.WriteLine("After connection addition:");
-        PrintGenome(genome);
-        
-        // Add a new connection
-        var res_addconn3 = mutationOperator.AddConnectionMutation(genome, -1, 1);
-        Console.WriteLine("After connection addition:");
-        PrintGenome(genome);
-        
-        // Add a new connection
-        var res_addconn4 = mutationOperator.AddConnectionMutation(genome, -1, 1);
-        Console.WriteLine("After connection addition:");
-        PrintGenome(genome);
-        
-        // Add a new connection
-        var res_addconn5 = mutationOperator.AddConnectionMutation(genome, -1, 1);
-        Console.WriteLine("After connection addition:");
-        PrintGenome(genome);
-        
-        // Add a new connection
-        var res_addconn6 = mutationOperator.AddConnectionMutation(genome, -1, 1);
-        Console.WriteLine("After connection addition:");
-        PrintGenome(genome);
-        
-        // Add a new connection
-        var res_addconn7 = mutationOperator.AddConnectionMutation(genome, -1, 1);
-        Console.WriteLine("After connection addition:");
-        PrintGenome(genome);
-        
-        // Add a new connection
-        var res_addconn8 = mutationOperator.AddConnectionMutation(genome, -1, 1);
-        Console.WriteLine("After connection addition:");
-        PrintGenome(genome);
+        for (int i = 0; i < numMutations; i++) {
+            int mutationChoice = random.Next(3); // Randomly choose between 0 and 2
 
+            switch(mutationChoice) {
+                case 0:
+                    // Mutate the weights
+                    mutationOperator.MutateWeights(genome, 0.7, 0.2);
+                    Console.WriteLine("After weight mutation:");
+                    PrintGenome(genome);
+                    break;
+                case 1:
+                    // Add a new node
+                    mutationOperator.AddNodeMutation(genome);
+                    Console.WriteLine("After node addition:");
+                    PrintGenome(genome);
+                    break;
+                case 2:
+                    // Add a new connection
+                    mutationOperator.AddConnectionMutation(genome, -1, 1);
+                    Console.WriteLine("After connection addition:");
+                    PrintGenome(genome);
+                    break;
+            }
+        }
+
+        // Set some input values
+        double[] inputs = {0.2, 0.4, 0.6};
+
+        // Propagate the values through the network
+        double[] outputs = genome.ForwardPropagate(inputs);
+        
         var x = 1;
     }
+
+
 
     public static void PrintGenome(Genome genome)
     {

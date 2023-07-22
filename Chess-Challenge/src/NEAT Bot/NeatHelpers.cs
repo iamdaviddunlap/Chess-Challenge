@@ -63,10 +63,41 @@ namespace Chess_Challenge.NEAT_Bot {
             Nodes.Add(node);
             return node;
         }
+        
+        public double[] ForwardPropagate(double[] inputs) {
+            if (inputs.Length != Nodes.Count(n => n.Type == "input")) {
+                throw new ArgumentException("Input length must be equal to the number of input nodes");
+            }
+            
+            // Assign input values
+            for (int i = 0; i < inputs.Length; i++) {
+                Nodes[i].Value = inputs[i];
+            }
+            
+            // Sort nodes by depth
+            var orderedNodes = Nodes.OrderBy(n => n.Depth).ToList();
+            
+            // Propagate values
+            foreach (var node in orderedNodes) {
+                if (node.Type == "input") continue; // Skip input nodes
+                node.Value = 0; // Reset value
+                
+                // Sum the product of the incoming connection weights and the source node values
+                foreach (var conn in Connections.Where(c => c.Nodes.Item2.ID == node.ID && c.IsEnabled)) {
+                    node.Value += conn.Weight * conn.Nodes.Item1.Value;
+                }
+                
+                // Apply activation function (here using sigmoid)
+                node.Value = 1.0 / (1.0 + Math.Exp(-node.Value));
+            }
+
+            // Return output values
+            return Nodes.Where(n => n.Type == "output").Select(n => n.Value).ToArray();
+        }
     }
 
     public class MutationOperator {
-        private static int randomSeed = 2;
+        private static int randomSeed = 1;
         public void MutateWeights(Genome genome, double perturbChance, double perturbValue) {
             Random random = new Random(randomSeed);
 
@@ -127,13 +158,13 @@ namespace Chess_Challenge.NEAT_Bot {
         public bool AddNodeMutation(Genome genome) {
             var numLoops = 0;
             const int maxLoops = 1000;
+            Random random = new Random(randomSeed);
             while (true) {
                 numLoops++;
                 if (numLoops > maxLoops) {
                     return false;
                 }
-                Random random = new Random(randomSeed);
-        
+
                 // Pick a random connection to split
                 Connection oldConnection = genome.Connections[random.Next(genome.Connections.Count)];
 

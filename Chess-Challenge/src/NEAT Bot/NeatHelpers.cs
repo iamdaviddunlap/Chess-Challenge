@@ -193,7 +193,7 @@ namespace Chess_Challenge.NEAT_Bot {
         private void IncrementNodeDepth(Genome genome, Node node) {
             node.Depth++;
             foreach (var conn in genome.Connections) {
-                if (conn.Nodes.Item1 == node) {
+                if (conn.Nodes.Item1 == node && conn.Nodes.Item2.Depth <= node.Depth) {
                     IncrementNodeDepth(genome, conn.Nodes.Item2);
                 }
             }

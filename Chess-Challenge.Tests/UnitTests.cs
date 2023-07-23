@@ -1,11 +1,10 @@
-using Xunit;
-using Chess_Challenge;
-using Chess_Challenge.NEAT_Bot;
-using Raylib_cs;
 using System.Drawing;
 using System.Drawing.Imaging;
+using Chess_Challenge.NEAT_Bot;
 using Color = System.Drawing.Color;
 using Rectangle = System.Drawing.Rectangle;
+
+namespace Chess_Challenge.Tests; 
 
 public class UnitTests
 {
@@ -214,22 +213,19 @@ public class UnitTests
         }
     }
 
-    public static void PrintGenome(Genome genome)
-        {
-            Console.WriteLine("Nodes:");
-            foreach (Node node in genome.Nodes)
-            {
-                Console.WriteLine($"  ID: {node.ID}, Type: {node.Type}, Depth: {node.Depth}");
-            }
-
-            Console.WriteLine("Connections:");
-            foreach (Connection connection in genome.Connections)
-            {
-                Node node1 = connection.Nodes.Item1;
-                Node node2 = connection.Nodes.Item2;
-
-                Console.WriteLine($"  Nodes: {node1.ID}, {node2.ID}, Weight: {connection.Weight}, Enabled: {connection.IsEnabled}, Innovation: {connection.InnovationNumber}");
-            }
+    public static void PrintGenome(Genome genome) {
+        Console.WriteLine("Nodes:");
+        foreach (Node node in genome.Nodes) {
+            Console.WriteLine($"  ID: {node.ID}, Type: {node.Type}, Depth: {node.Depth}");
         }
+
+        Console.WriteLine("Connections:");
+        foreach (Connection connection in genome.Connections) {
+            Node node1 = connection.Nodes.Item1;
+            Node node2 = connection.Nodes.Item2;
+
+            Console.WriteLine($"  Nodes: {node1.ID}, {node2.ID}, Weight: {connection.Weight}, Enabled: {connection.IsEnabled}, Innovation: {connection.InnovationNumber}");
+        }
+    }
 
 }

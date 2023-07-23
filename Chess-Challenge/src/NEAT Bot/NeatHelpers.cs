@@ -136,17 +136,18 @@ public class MutationOperator {
         Random random = randomSeed.HasValue ? new Random(randomSeed.Value) : new Random();
         while (true) {
             numLoops++;
-            if (numLoops > maxLoops) {
+            if (numLoops >= maxLoops) {
                 return false;
             }
 
             // Pick two random nodes
             Node node1 = genome.Nodes[random.Next(genome.Nodes.Count)];
             Node node2 = genome.Nodes[random.Next(genome.Nodes.Count)];
-    
-            if (node1.Depth == node2.Depth) {
-                continue;
-            }
+
+            // Uncomment this to restrict connecting nodes that are on the same depth
+            // if (node1.Depth == node2.Depth) {
+            //     continue;
+            // }
 
             // Check if these two nodes are already connected
             var areConnected = false;
@@ -160,12 +161,14 @@ public class MutationOperator {
             if (!areConnected) {
                 // Add the new connection to the genome
                 var weight = Math.Round(random.NextDouble() * (maxWeight - minWeight) + minWeight, 3);
-                if (node1.Depth < node2.Depth) {
-                    genome.AddConnection(node1, node2, weight, true);
-                }
-                else {
-                    genome.AddConnection(node2, node1, weight, true);
-                }
+                // Uncomment this to enforce all connections going forward (ie disallowing recurrent connections)
+                // if (node1.Depth < node2.Depth) {
+                //     genome.AddConnection(node1, node2, weight, true);
+                // }
+                // else {
+                //     genome.AddConnection(node2, node1, weight, true);
+                // }
+                genome.AddConnection(node1, node2, weight, true);
             }
             else {
                 continue;
@@ -181,7 +184,7 @@ public class MutationOperator {
         Random random = randomSeed.HasValue ? new Random(randomSeed.Value) : new Random();
         while (true) {
             numLoops++;
-            if (numLoops > maxLoops) {
+            if (numLoops >= maxLoops) {
                 return false;
             }
 
@@ -213,7 +216,7 @@ public class MutationOperator {
     private void IncrementNodeDepth(Genome genome, Node node) {
         node.Depth++;
         foreach (var conn in genome.Connections) {
-            if (conn.Nodes.Item1 == node && conn.Nodes.Item2.Depth <= node.Depth) {
+            if (conn.Nodes.Item1 == node && conn.Nodes.Item2.Depth == node.Depth) {
                 IncrementNodeDepth(genome, conn.Nodes.Item2);
             }
         }

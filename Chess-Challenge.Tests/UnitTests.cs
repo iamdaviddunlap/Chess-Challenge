@@ -12,11 +12,14 @@ public class UnitTests
 
     [Fact] // This attribute signifies that the method below is a test
     public void MainTest() {
+
+        int randomSeed = 1;
+        
         // Create an instance of your mutation operator
         MutationOperator mutationOperator = new MutationOperator();
     
         // Create a new genome with two nodes and one connection
-        Genome genome = new Genome(inputs: 3, outputs: 1);
+        Genome genome = new Genome(inputs: 3, outputs: 1, randomSeed: randomSeed);
     
         Console.WriteLine("Original genome:");
         PrintGenome(genome);

@@ -14,23 +14,23 @@ public class UnitTests
     public void MainTest() {
         // Create an instance of your mutation operator
         MutationOperator mutationOperator = new MutationOperator();
-
+    
         // Create a new genome with two nodes and one connection
         Genome genome = new Genome(inputs: 3, outputs: 1);
-
+    
         Console.WriteLine("Original genome:");
         PrintGenome(genome);
-
+    
         Random random = new Random(1);
         int numMutations = random.Next(30, 40); // Randomly choose between 1 and 10 mutations
-
+    
         for (int i = 0; i < numMutations; i++) {
             int mutationChoice = random.Next(3); // Randomly choose between 0 and 2
-
+    
             switch(mutationChoice) {
                 case 0:
                     // Mutate the weights
-                    mutationOperator.MutateWeights(genome, 0.7, 0.2);
+                    mutationOperator.MutateWeights(genome, 0.7, 0.1, -1, 1);
                     Console.WriteLine("After weight mutation:");
                     PrintGenome(genome);
                     break;
@@ -48,14 +48,55 @@ public class UnitTests
                     break;
             }
         }
-
+    
         // Set some input values
         double[] inputs = {0.2, 0.4, 0.6};
+    
+        // Propagate the values through the network
+        double[] outputs = genome.Activate(inputs);
+    
+        DrawNetwork(genome, "network.png");
+    }
+    
+    [Fact]
+    public void RecurrentNetworkXORTest() {
+        // Create an instance of your mutation operator
+        MutationOperator mutationOperator = new MutationOperator();
+
+        // Create a new genome with two nodes and one connection
+        Genome genome = new Genome(inputs: 3, outputs: 1, randomSeed: 1);
+        mutationOperator.AddNodeMutation(genome: genome, randomSeed: 5);
+        genome.AddConnection(genome.Nodes[5-1], genome.Nodes[3-1], 1, true);
+        genome.AddConnection(genome.Nodes[3-1], genome.Nodes[5-1], 1, true);
+        genome.AddConnection(genome.Nodes[1-1], genome.Nodes[5-1], 1, true);
+        PrintGenome(genome);
+        
+        // Loop through the weights and set them up to be the weights for XOR (found online a model with a recurrent
+        //   connection and the weights for an XOR model
+        List<double> new_weights = new List<double> { 12.46, -1, -7.47, 10.99, 11.78, 8.01, -3.67, -3.14 };
+        for (int i = 0; i < genome.Connections.Count; i++) {
+            genome.Connections[i].Weight = new_weights[i];
+        }
+        Console.WriteLine("After weight assignments for XOR:");
+        PrintGenome(genome);
+
+        // Set the input values to explore the full truth table. Note that the 3rd input is a bias node
+        double[] inputs1 = {0, 0, 1};
+        double[] inputs2 = {1, 0, 1};
+        double[] inputs3 = {0, 1, 1};
+        double[] inputs4 = {1, 1, 1};
 
         // Propagate the values through the network
-        double[] outputs = genome.ForwardPropagate(inputs);
-
-        DrawNetwork(genome, "network.png");
+        double zeroZeroOut = genome.Activate(inputs1)[0];
+        double oneZeroOut = genome.Activate(inputs2)[0];
+        double zeroOneOut = genome.Activate(inputs3)[0];
+        double oneOneOut = genome.Activate(inputs4)[0];
+        
+        // Check that this network produces the correct outputs for XOR
+        Assert.Equal(0, zeroZeroOut, precision: 1);
+        Assert.Equal(1, oneZeroOut, precision: 1);
+        Assert.Equal(1, zeroOneOut, precision: 1);
+        Assert.Equal(0, oneOneOut, precision: 1);
     }
 
     public void DrawNetwork(Genome genome, string filename) 

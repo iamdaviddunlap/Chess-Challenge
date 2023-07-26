@@ -66,39 +66,49 @@ namespace Chess_Challenge.NEAT_Bot {
             return node;
         }
 
-        public double[] Activate(double[] inputs) {
+        public double[] Activate(double[] inputs, int timestepsPerActivation = 1) {
             if (inputs.Length != Nodes.Count(n => n.Type == "input")) {
                 throw new ArgumentException("Input length must be equal to the number of input nodes");
             }
-            
+    
             // Assign input values
             for (int i = 0; i < inputs.Length; i++) {
                 Nodes[i].Value = inputs[i];
             }
-            
+    
             // Sort nodes by depth
             var orderedNodes = Nodes.OrderBy(n => n.Depth).ToList();
-            
-            // Propagate values
-            foreach (var node in orderedNodes) {
-                if (node.Type != "input") {
-                    node.Value = 0; // Reset value
-                }
+    
+            // Activate the network for a fixed number of time steps
+            for (int t = 0; t < timestepsPerActivation; t++) {
+                // Propagate values
+                foreach (var node in orderedNodes) {
+                    if (node.Type != "input") {
+                        node.Value = 0; // Reset value
+                    }
 
-                // Sum the product of the incoming connection weights and the source node values
-                foreach (var conn in Connections.Where(c => c.Nodes.Item2.ID == node.ID && c.IsEnabled)) {
-                    node.Value += conn.Weight * conn.Nodes.Item1.Value;
-                }
-                
-                // Apply activation function (here using sigmoid)
-                if (node.Type != "input") {
-                    node.Value = 1.0 / (1.0 + Math.Exp(-node.Value));
+                    // Sum the product of the incoming connection weights and the source node values
+                    foreach (var conn in Connections.Where(c => c.Nodes.Item2.ID == node.ID && c.IsEnabled)) {
+                        node.Value += conn.Weight * conn.Nodes.Item1.Value;
+                    }
+            
+                    // Apply activation function (here using sigmoid)
+                    if (node.Type != "input") {
+                        node.Value = 1.0 / (1.0 + Math.Exp(-node.Value));
+                    }
                 }
             }
 
             // Return output values
             return Nodes.Where(n => n.Type == "output").Select(n => n.Value).ToArray();
         }
+        
+        public void ResetState() {
+            foreach (var node in Nodes) {
+                node.Value = 0;
+            }
+        }
+
     }
 }
 

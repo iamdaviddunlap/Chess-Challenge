@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Chess_Challenge.NEAT_Bot; 
 
@@ -8,11 +9,17 @@ public abstract class Trainer {
     private const int PopulationSize = 10;
     private const int InputsCount = 3;
     private const int OutputsCount = 1;
+    private const double MinVal = -99.999;
+    private const double MaxVal = 99.999;
 
     public static void RunTraining(int maxGenerations) {
+
+        int randomSeed = 1;
+        Random random = new Random(randomSeed);
+        
         // Initialization
-        Population hostPopulation = new Population(PopulationSize, InputsCount, OutputsCount);
-        Population parasitePopulation = new Population(PopulationSize, InputsCount, OutputsCount);
+        Population hostPopulation = new Population(PopulationSize, InputsCount, OutputsCount, MinVal, MaxVal, random);
+        Population parasitePopulation = new Population(PopulationSize, InputsCount, OutputsCount, MinVal, MaxVal, random);
 
         List<Organism> hallOfFame = new List<Organism>();
 

@@ -20,8 +20,6 @@ public class Organism {
 public class Genome {
         public List<Connection> Connections { get; set; }
         public List<Node> Nodes { get; set; }
-        
-        public double InitialWeight { get; set; }
 
         private int _curInnovationNumber;
 
@@ -100,5 +98,34 @@ public class Genome {
                 node.Value = 0;
             }
         }
+        
+        public class Node {
+            public int ID { get; set; }
+            public string Type { get; set; }
+            public double Value { get; set; }
+            public int Depth { get; set; }
+            
+            public override string ToString() {
+                return $"[{Type} {ID}]";
+            }
+        }
 
-    }
+        public class Connection {
+            public Tuple<Node, Node> Nodes { get; private set; }
+            public double Weight { get; set; }
+            public bool IsEnabled { get; set; }
+            public int InnovationNumber { get; set; }
+
+            public Connection(Node node1, Node node2, double weight, bool isEnabled, int innovationNumber) {
+                Nodes = new Tuple<Node, Node>(node1, node2);
+                Weight = weight;
+                IsEnabled = isEnabled;
+                InnovationNumber = innovationNumber;
+            }
+            
+            public override string ToString() {
+                return $"{Nodes.Item1} -> {Nodes.Item2}";
+            }
+        }
+
+}

@@ -6,16 +6,20 @@ namespace Chess_Challenge.NEAT_Bot;
 public class Population {
 
     private Random Random;
+    private double minVal;  // The smallest a weight or bias can get
+    private double maxVal;  // The biggest a weight or bias can get
     public List<Organism> Organisms { get; } = new();
 
-    public Population(int numOrganisms, int organismInputs, int organismOutputs, Random? random = null) {
+    public Population(int numOrganisms, int organismInputs, int organismOutputs, double minVal, double maxVal, Random? random = null) {
         Random = random ?? new Random();  // Create new Random object if none is provided
+        this.minVal = minVal;
+        this.maxVal = maxVal;
         for (var i = 0; i < numOrganisms; i++) {
             var genome = new Genome(inputs: organismInputs, outputs: organismOutputs, randomSeed: 1);
             var organism = new Organism(genome);
+            Mutation.MutateGenome(organism.Genome, minVal, maxVal, Random);
             Organisms.Add(organism);
         }
-        // TODO should I start a population by mutating all species?
     }
 
     public Dictionary<Organism, Organism> EvaluateFitnesses(Organism host, Population parasitePopulation, List<Organism> hallOfFame) {

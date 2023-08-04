@@ -10,10 +10,16 @@ public class Organism {
     public int Fitness { get; set; }
     public int SpeciesId { get; set; }
 
-    public Organism(Genome genome) {
+    public int OrganismId;
+
+    private InnovationHandler _innovationHandler;
+
+    public Organism(Genome genome, InnovationHandler innovationHandler) {
         Genome = genome;
+        _innovationHandler = innovationHandler;
         Fitness = -1;
         SpeciesId = -1;
+        OrganismId = innovationHandler.GetNextOrganismId();
     }
 }
 

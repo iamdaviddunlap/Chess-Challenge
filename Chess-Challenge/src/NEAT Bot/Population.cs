@@ -17,7 +17,7 @@ public class Population {
         this.minVal = minVal;
         this.maxVal = maxVal;
         for (var i = 0; i < numOrganisms; i++) {
-            var genome = new Genome(inputs: organismInputs, outputs: organismOutputs, randomSeed: 1);
+            var genome = new Genome(inputs: organismInputs, outputs: organismOutputs, innovationHandler, Random, minWeight: minVal, maxWeight: maxVal);
             var organism = new Organism(genome, innovationHandler);
             Mutation.MutateGenome(organism.Genome, minVal, maxVal, Random);
             Organisms.Add(organism);

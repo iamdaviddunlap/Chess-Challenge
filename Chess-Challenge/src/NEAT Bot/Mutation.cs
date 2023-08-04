@@ -8,7 +8,8 @@ public static class Mutation {
         
         const double mutateWeightsProb = 0.8;
         const double addConnectionProb = 0.3;
-        const double addNodeProb = 0.01;
+        // const double addNodeProb = 0.01;  // This is the val from Ken Stanley, I'm increasing for testing
+        const double addNodeProb = 0.3;
 
         // Check if we should mutate weights
         if (random.NextDouble() < mutateWeightsProb) {
@@ -113,7 +114,8 @@ public static class Mutation {
             // Pick a random connection to split
             var oldConnection = genome.Connections[random.Next(genome.Connections.Count)];
 
-            if (!oldConnection.IsEnabled) {
+            // Don't split a disabled connection, a self-connection, or a recurrent connection
+            if (!oldConnection.IsEnabled || oldConnection.Nodes.Item1.ID >= oldConnection.Nodes.Item2.ID) {
                 continue;
             }
 
@@ -121,7 +123,7 @@ public static class Mutation {
             oldConnection.IsEnabled = false;
 
             // Create new node
-            var newNode = genome.AddNode("hidden", depth: oldConnection.Nodes.Item1.Depth+1);
+            var newNode = genome.AddNode("hidden", depth: oldConnection.Nodes.Item1.Depth+1, sourceConnection: oldConnection);
         
             // Increment depth for old output if needed
             if (oldConnection.Nodes.Item1.Depth + 1 == oldConnection.Nodes.Item2.Depth) {

@@ -12,14 +12,14 @@ public class Organism {
 
     public int OrganismId;
 
-    private InnovationHandler _innovationHandler;
+    private readonly InnovationHandler _innovationHandler;
 
     public Organism(Genome genome, InnovationHandler innovationHandler) {
         Genome = genome;
         _innovationHandler = innovationHandler;
         Fitness = -1;
         SpeciesId = -1;
-        OrganismId = innovationHandler.GetNextOrganismId();
+        OrganismId = _innovationHandler.GetNextOrganismId();
     }
 }
 
@@ -27,14 +27,14 @@ public class Genome {
         public List<Connection> Connections { get; set; }
         public List<Node> Nodes { get; set; }
 
-        private int _curInnovationNumber;
+        private readonly InnovationHandler _innovationHandler;
+        private Random Random;
 
-        public Genome(int inputs, int outputs, double minWeight = -1, double maxWeight = 1, int? randomSeed = null) {
-            Random random = randomSeed.HasValue ? new Random(randomSeed.Value) : new Random();
-
+        public Genome(int inputs, int outputs, InnovationHandler innovationHandler, Random random, double minWeight = -1, double maxWeight = 1) {
+            _innovationHandler = innovationHandler;
+            this.Random = random;
             Connections = new List<Connection>();
             Nodes = new List<Node>();
-            _curInnovationNumber = 0;
             for (var i = 0; i < inputs; i++) {
                 AddNode("input", depth: 0);
             }
@@ -43,21 +43,31 @@ public class Genome {
                 for (var j = 0; j < Nodes.Count-(i+1); j++) {
                     var curIn = Nodes[j];
                     var curOut = Nodes[^1];
-                    var weight = Math.Round(random.NextDouble() * (maxWeight - minWeight) + minWeight, 3);
+                    var weight = Math.Round(Random.NextDouble() * (maxWeight - minWeight) + minWeight, 3);
                     AddConnection(curIn, curOut, weight, true);
                 }
             }
         }
 
         public Connection AddConnection(Node node1, Node node2, double weight, bool isEnabled) {
-            _curInnovationNumber++;
-            var conn = new Connection(node1, node2, weight, isEnabled, innovationNumber: _curInnovationNumber);
+            var connKey = new Tuple<int, int>(node1.ID, node2.ID);
+            var innovationNumber = _innovationHandler.AssignConnectionId(connKey);
+
+            var conn = new Connection(node1, node2, weight, isEnabled, innovationNumber: innovationNumber);
             Connections.Add(conn);
             return conn;
         }
         
-        public Node AddNode(string type, int depth) {
-            var node = new Node { ID = Nodes.Count, Type = type, Depth = depth};
+        public Node AddNode(string type, int depth, Connection? sourceConnection = null) {
+            int nodeId;
+            if (sourceConnection == null) {
+                nodeId = Nodes.Count;
+            }
+            else {
+                nodeId = _innovationHandler.AssignNodeId(
+                    new Tuple<int, int>(sourceConnection.Nodes.Item1.ID, sourceConnection.Nodes.Item2.ID));
+            }
+            var node = new Node { ID = nodeId, Type = type, Depth = depth};
             Nodes.Add(node);
             return node;
         }

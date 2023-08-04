@@ -10,8 +10,8 @@ public class InnovationHandler {
     private int _curOrganismId = 0;
     private int _curNodeId = 0;
     private int _curConnectionId = 0;
-    public Dictionary<int, int> NodeIdMapping = new();  // This map has keys as the source connection and values as the corresponding nodeId
-    public Dictionary<Tuple<int, int>, int> ConnectionIdMapping = new();  // This map has keys as a tuple of (inputId, outputId) and values as the corresponding connectionId
+    public Dictionary<Tuple<int, int>, int> NodeIdMapping = new();
+    public Dictionary<Tuple<int, int>, int> ConnectionIdMapping = new();
 
     public InnovationHandler() { }
 
@@ -21,15 +21,30 @@ public class InnovationHandler {
         return curId;
     }
     
-    public int GetNextNodeId() {
-        var curId = _curNodeId;
-        _curNodeId++;
-        return curId;
+    public int AssignNodeId(Tuple<int, int> source) {
+        int assignedId;
+        if (NodeIdMapping.TryGetValue(source, out var value)) {
+            // If the source connection is already in the map, use the same innovation number
+            assignedId = value;
+        } else {
+            // If not, get a new innovation number and add it to the map
+            assignedId = _curNodeId;
+            NodeIdMapping[source] = assignedId;
+            _curNodeId++;
+        }
+        return assignedId;
     }
     
-    public int GetNextConnectionId() {
-        var curId = _curConnectionId;
-        _curConnectionId++;
-        return curId;
+    public int AssignConnectionId(Tuple<int, int> connection) {
+        if (ConnectionIdMapping.TryGetValue(connection, out var value)) {
+            // If the connection is already in the map, return its ID
+            return value;
+        } else {
+            // If not, create a new ID and add it to the map
+            int newId = _curConnectionId;
+            ConnectionIdMapping[connection] = newId;
+            _curConnectionId++;
+            return newId;
+        }
     }
 }

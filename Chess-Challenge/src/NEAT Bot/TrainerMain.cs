@@ -18,7 +18,7 @@ public abstract class Trainer {
         Random random = new Random(randomSeed);
         
         // Initialization
-        InnovationHandler innovationHandler = new InnovationHandler();
+        InnovationHandler innovationHandler = new InnovationHandler(InputsCount, OutputsCount);
         Population hostPopulation = new Population(PopulationSize, InputsCount, OutputsCount, MinVal, MaxVal, innovationHandler, random);
         Population parasitePopulation = new Population(PopulationSize, InputsCount, OutputsCount, MinVal, MaxVal, innovationHandler, random);
 

@@ -140,7 +140,12 @@ public class Genome {
             }
             
             public override string ToString() {
-                return $"{Nodes.Item1} -> {Nodes.Item2}";
+                if (IsEnabled) {
+                    return $"{Nodes.Item1} -> {Nodes.Item2}";
+                }
+                else {
+                    return $"X| {Nodes.Item1} -> {Nodes.Item2} |X";
+                }
             }
         }
 

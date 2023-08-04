@@ -140,7 +140,7 @@ public static class Mutation {
     private static void _IncrementNodeDepth(Genome genome, Genome.Node node) {
         node.Depth++;
         foreach (var conn in genome.Connections) {
-            if (conn.Nodes.Item1 == node && conn.Nodes.Item2.Depth == node.Depth) {
+            if (conn.Nodes.Item1 == node && conn.Nodes.Item2.Depth == node.Depth && conn.Nodes.Item1.ID != conn.Nodes.Item2.ID) {
                 _IncrementNodeDepth(genome, conn.Nodes.Item2);
             }
         }

@@ -13,7 +13,9 @@ public class InnovationHandler {
     public Dictionary<Tuple<int, int>, int> NodeIdMapping = new();
     public Dictionary<Tuple<int, int>, int> ConnectionIdMapping = new();
 
-    public InnovationHandler() { }
+    public InnovationHandler(int numInputs, int numOutputs) {
+        _curNodeId = numInputs + numOutputs;
+    }
 
     public int GetNextOrganismId() {
         var curId = _curOrganismId;

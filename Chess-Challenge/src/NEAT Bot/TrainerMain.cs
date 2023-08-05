@@ -24,12 +24,12 @@ public abstract class Trainer {
             var allHostResults = new Dictionary<Tuple<Organism, Organism, bool>, int>();
             var allParasiteResults = new Dictionary<Tuple<Organism, Organism, bool>, int>();
 
-            var challengersForHosts = parasitePopulation.selectChallengers(hallOfFame);
-            var challengersForParasites = hostPopulation.selectChallengers(hallOfFame);
+            var challengersForHosts = parasitePopulation.SelectChallengers(hallOfFame);
+            var challengersForParasites = hostPopulation.SelectChallengers(hallOfFame);
             
             // Evaluate raw fitness for hosts. Also save any results for organisms that are challengers for the parasites
             foreach (Organism host in hostPopulation.Organisms) {
-                var curHostGameWinners = hostPopulation.EvaluateFitness(host, challengersForHosts);
+                var curHostGameWinners = Fitness.EvaluateFitness(host, challengersForHosts, random);
 
                 if(challengersForParasites.Contains(host)) {
                     foreach(var (originalKey, value) in curHostGameWinners) {
@@ -51,11 +51,15 @@ public abstract class Trainer {
             
             // Evaluate raw fitness of parasites
             foreach (Organism parasite in parasitePopulation.Organisms) {
-                var curParasiteGameWinners = parasitePopulation.EvaluateFitness(parasite, challengersForParasites, parasitePrecalcResults);
+                var curParasiteGameWinners = Fitness.EvaluateFitness(parasite, challengersForParasites, random, parasitePrecalcResults);
                 foreach(var entry in curParasiteGameWinners) {
                     allParasiteResults[entry.Key] = entry.Value;
                 }
             }
+            
+            // Calculate fitnesses for the organisms in each population
+            Fitness.AssignFitnesses(hostPopulation, allHostResults);
+            Fitness.AssignFitnesses(parasitePopulation, allParasiteResults);
 
             var x = 1;
 

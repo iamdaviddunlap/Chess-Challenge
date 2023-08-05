@@ -26,7 +26,7 @@ public class Population {
     }
 
     /// Returns a list of challenger Organisms taken as a combination of this population's champions and the Hall of Fame
-    public List<Organism> selectChallengers(List<Organism> hallOfFame) {
+    public List<Organism> SelectChallengers(List<Organism> hallOfFame) {
         List<Organism> challengers = new List<Organism>();
         List<int> challengerIds = new List<int>();
         List<Organism> speciesChampions = new List<Organism>();
@@ -36,8 +36,8 @@ public class Population {
             speciesChampions.Add(GetSpeciesChampion(speciesId));
         }
 
-        // Sort the speciesChampions list by AdjustedFitness in descending order and take the top few
-        speciesChampions = speciesChampions.OrderByDescending(o => o.AdjustedFitness).ToList();
+        // Sort the speciesChampions list by Fitness in descending order and take the top few
+        speciesChampions = speciesChampions.OrderByDescending(o => o.Fitness).ToList();
         challengers.AddRange(speciesChampions.Take(Constants.NumChampionParasites));
         challengerIds.AddRange(speciesChampions.Take(Constants.NumChampionParasites).Select(o => o.OrganismId));
 
@@ -60,45 +60,6 @@ public class Population {
         }
 
         return challengers;
-    }
-
-    /// This function will run games to determine the host's RawFitness. It will select a set of challengers using the
-    /// parasite population and the Hall of Fame. 2 games will be played against each challenger, one as white and one
-    /// as black. The RawFitness is the total of rewards won from all games.
-    public Dictionary<Tuple<Organism, Organism, bool>, int> EvaluateFitness(Organism host, List<Organism> challengers,
-        Dictionary<Tuple<Organism, Organism, bool>, int>? precalcResults = null) {
-        var results = new Dictionary<Tuple<Organism, Organism, bool>, int>();
-
-        // Main loop over games for each challenger. The host plays each challenger twice - once as white and once as black
-        // TODO parallelize this loop! It will likely take a very long time as-is
-        var totalFitness = 0.0;
-        foreach (var challenger in challengers) 
-        {
-            for (int i = 0; i < 2; i++) 
-            {
-                bool hostIsWhite = i == 0;
-                var key = new Tuple<Organism, Organism, bool>(host, challenger, hostIsWhite);
-
-                int result;
-                if (precalcResults != null && precalcResults.TryGetValue(key, out var precalcResult))
-                {
-                    // Use the precalculated result if it exists in the precalcResults dictionary
-                    result = precalcResult;
-                }
-                else
-                {
-                    // Run the PlayGame method if no precalculated result is found
-                    result = GameController.PlayGame(host, challenger, hostIsWhite, Random);
-                }
-
-                results[key] = result;
-                totalFitness += GameController.ConvertResultToFitness(result);
-            }
-        }
-
-        host.RawFitness = totalFitness;
-
-        return results;
     }
 
 
@@ -133,8 +94,8 @@ public class Population {
     }
 
     private Organism GetSpeciesChampion(int speciesId) {
-        // Use LINQ to filter Organisms by SpeciesId and then sort by AdjustedFitness in descending order
-        var species = Organisms.Where(o => o.SpeciesId == speciesId).OrderByDescending(o => o.AdjustedFitness).ToList();
+        // Use LINQ to filter Organisms by SpeciesId and then sort by Fitness in descending order
+        var species = Organisms.Where(o => o.SpeciesId == speciesId).OrderByDescending(o => o.Fitness).ToList();
     
         // If there are no organisms of the specified species, throw a new exception
         if (species.Count == 0) {

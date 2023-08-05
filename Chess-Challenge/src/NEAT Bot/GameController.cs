@@ -3,16 +3,6 @@
 namespace Chess_Challenge.NEAT_Bot; 
 
 public static class GameController {
-    
-    public static double ConvertResultToFitness(int result) {
-        return result switch {
-            // return the corresponding fitness reward based on the result of the game
-            1 => Constants.FitnessRewardWin,
-            0 => Constants.FitnessRewardDraw,
-            -1 => Constants.FitnessRewardLoss,
-            _ => throw new ArgumentOutOfRangeException()
-        };
-    }
 
     ///  Play game between two players. The return value is the fitness reward for the host
     public static int PlayGame(Organism host, Organism parasite, bool hostIsWhite, Random random) {

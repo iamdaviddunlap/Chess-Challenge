@@ -7,8 +7,7 @@ namespace Chess_Challenge.NEAT_Bot;
 public class Organism {
 
     public Genome Genome;
-    public double AdjustedFitness { get; set; }
-    public double RawFitness { get; set; }
+    public double Fitness { get; set; }
     public int SpeciesId { get; set; }
 
     public int OrganismId;
@@ -18,8 +17,7 @@ public class Organism {
     public Organism(Genome genome, InnovationHandler innovationHandler) {
         Genome = genome;
         _innovationHandler = innovationHandler;
-        AdjustedFitness = -1;
-        RawFitness = -1;
+        Fitness = -1;
         SpeciesId = -1;
         OrganismId = _innovationHandler.GetNextOrganismId();
     }

@@ -6,6 +6,9 @@ public static class Constants {
     public const int OutputsCount = 1;
     public const double MinVal = -99.999;
     public const double MaxVal = 99.999;
+    // public const double MinVal = -1.999;
+    // public const double MaxVal = 1.999;
+
 
     public const int NumHallOfFameParasites = 8;
     public const int NumChampionParasites = 4;
@@ -21,4 +24,12 @@ public static class Constants {
     public const double DisjointCoeff = 2.0;
     public const double ExcessCoeff = 2.0;
     public const double WeightCoeff = 1.0;
+
+    public static double SpeciesCompatThresh = 6.0;  // Ken Stanley set this to 6.0
+    public const double SpeciesCompatModifier = 0.3; // TOD0 use this; every generation the SpeciesCompatThresh is adjusted by this much
+    public const int SpeciesCountTarget = 10;  // I haven't tuned this
+
+    public const double FitnessRewardWin = 2.0;
+    public const double FitnessRewardDraw = 1.0;
+    public const double FitnessRewardLoss = 0.0;
 }

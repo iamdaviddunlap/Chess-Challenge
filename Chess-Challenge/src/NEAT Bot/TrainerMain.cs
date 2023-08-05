@@ -18,17 +18,47 @@ public abstract class Trainer {
 
         // Main evolutionary loop
         for (var generation = 0; generation < maxGenerations; generation++) {
+            
+            
+            var parasitePrecalcResults = new Dictionary<Tuple<Organism, Organism, bool>, int>();
+            var allHostResults = new Dictionary<Tuple<Organism, Organism, bool>, int>();
+            var allParasiteResults = new Dictionary<Tuple<Organism, Organism, bool>, int>();
 
-            // Evaluate fitness of host
+            var challengersForHosts = parasitePopulation.selectChallengers(hallOfFame);
+            var challengersForParasites = hostPopulation.selectChallengers(hallOfFame);
+            
+            // Evaluate raw fitness for hosts. Also save any results for organisms that are challengers for the parasites
             foreach (Organism host in hostPopulation.Organisms) {
-                Dictionary<Organism, Organism> hostGameWinners = hostPopulation.EvaluateFitnesses(host, parasitePopulation, hallOfFame);
-            }
-        
-            // Evaluate fitness of parasite
-            foreach (Organism parasite in hostPopulation.Organisms) {
-                Dictionary<Organism, Organism> parasiteGameWinners = parasitePopulation.EvaluateFitnesses(parasite, hostPopulation, hallOfFame);
+                var curHostGameWinners = hostPopulation.EvaluateFitness(host, challengersForHosts);
+
+                if(challengersForParasites.Contains(host)) {
+                    foreach(var (originalKey, value) in curHostGameWinners) {
+                        allHostResults[originalKey] = value;
+                        var newValue = -value;
+
+                        // Create a new key with swapped Organisms and inverted bool
+                        var newKey = new Tuple<Organism, Organism, bool>(originalKey.Item2, originalKey.Item1, !originalKey.Item3);
+
+                        parasitePrecalcResults[newKey] = newValue;
+                    }
+                }
+                else {
+                    foreach(var entry in curHostGameWinners) {
+                        allHostResults[entry.Key] = entry.Value;
+                    }
+                }
             }
             
+            // Evaluate raw fitness of parasites
+            foreach (Organism parasite in parasitePopulation.Organisms) {
+                var curParasiteGameWinners = parasitePopulation.EvaluateFitness(parasite, challengersForParasites, parasitePrecalcResults);
+                foreach(var entry in curParasiteGameWinners) {
+                    allParasiteResults[entry.Key] = entry.Value;
+                }
+            }
+
+            var x = 1;
+
             // TODO everything below here is basically pseudocode, but roughly what I want
             // // Form species in both populations
             // hostPopulation.Speciate();

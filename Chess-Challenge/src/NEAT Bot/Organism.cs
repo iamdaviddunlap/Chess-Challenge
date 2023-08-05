@@ -7,7 +7,8 @@ namespace Chess_Challenge.NEAT_Bot;
 public class Organism {
 
     public Genome Genome;
-    public int Fitness { get; set; }
+    public double AdjustedFitness { get; set; }
+    public double RawFitness { get; set; }
     public int SpeciesId { get; set; }
 
     public int OrganismId;
@@ -17,9 +18,14 @@ public class Organism {
     public Organism(Genome genome, InnovationHandler innovationHandler) {
         Genome = genome;
         _innovationHandler = innovationHandler;
-        Fitness = -1;
+        AdjustedFitness = -1;
+        RawFitness = -1;
         SpeciesId = -1;
         OrganismId = _innovationHandler.GetNextOrganismId();
+    }
+    
+    public override string ToString() {
+        return $"Organism #{OrganismId}";
     }
 }
 
@@ -177,10 +183,10 @@ public class Genome {
             
             public override string ToString() {
                 if (IsEnabled) {
-                    return $"{Nodes.Item1} -> {Nodes.Item2}";
+                    return $"{InnovationNumber}: {Nodes.Item1} -> {Nodes.Item2} :: {Weight}";
                 }
                 else {
-                    return $"X| {Nodes.Item1} -> {Nodes.Item2} |X";
+                    return $"{InnovationNumber}: X| {Nodes.Item1} -> {Nodes.Item2} :: {Weight} |X";
                 }
             }
         }

@@ -22,7 +22,7 @@ public class InnovationHandler {
         _curOrganismId++;
         return curId;
     }
-    
+
     public int AssignNodeId(Tuple<int, int> source) {
         int assignedId;
         if (NodeIdMapping.TryGetValue(source, out var value)) {

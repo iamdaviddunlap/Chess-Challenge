@@ -13,8 +13,8 @@ public class InnovationHandler {
     public Dictionary<Tuple<int, int>, int> NodeIdMapping = new();
     public Dictionary<Tuple<int, int>, int> ConnectionIdMapping = new();
 
-    public InnovationHandler(int numInputs, int numOutputs) {
-        _curNodeId = numInputs + numOutputs;
+    public InnovationHandler() {
+        _curNodeId = Constants.InputsCount + Constants.OutputsCount;
     }
 
     public int GetNextOrganismId() {

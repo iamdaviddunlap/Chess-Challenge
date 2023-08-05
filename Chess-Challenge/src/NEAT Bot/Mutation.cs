@@ -4,44 +4,38 @@ namespace Chess_Challenge.NEAT_Bot;
 
 public static class Mutation {
     
-    public static void MutateGenome(Genome genome, double minWeight, double maxWeight, Random random) {
-        
-        const double mutateWeightsProb = 0.8;
-        const double addConnectionProb = 0.3;
-        // const double addNodeProb = 0.01;  // This is the val from Ken Stanley, I'm increasing for testing
-        const double addNodeProb = 0.3;
+    public static void MutateGenome(Genome genome, Random random) {
 
         // Check if we should mutate weights
-        if (random.NextDouble() < mutateWeightsProb) {
-            const double perturbChance = 0.9;
-            const double perturbValue = 0.1;
-            MutateWeights(genome, perturbChance, perturbValue, minWeight, maxWeight, random);
+        if (random.NextDouble() < Constants.MutateWeightsProb) {
+            MutateWeights(genome, random);
         }
 
         // Check if we should add a connection
-        if (random.NextDouble() < addConnectionProb) {
-            AddConnectionMutation(genome, minWeight, maxWeight, random);
+        if (random.NextDouble() < Constants.AddConnectionProb) {
+            AddConnectionMutation(genome, random);
         }
 
         // Check if we should add a node
-        if (random.NextDouble() < addNodeProb) {
+        if (random.NextDouble() < Constants.AddNodeProb) {
             AddNodeMutation(genome, random);
         }
     }
     
-    private static void MutateWeights(Genome genome, double perturbChance, double perturbValue, double minWeight, double maxWeight, Random random) {
+    private static void MutateWeights(Genome genome, Random random) {
 
         foreach (var connection in genome.Connections) {
             // Check if we should perturb this connection weight
-            if (random.NextDouble() < perturbChance) {
+            if (random.NextDouble() < Constants.WeightPerturbChance) {
                 // Perturb the weight
-                var newWeight = connection.Weight + (random.NextDouble() * 2 - 1) * perturbValue;
+                var perturbAmount = (random.NextDouble() * 2 - 1) * Constants.WeightPerturbValue;
+                var newWeight = connection.Weight + perturbAmount;
 
                 // Ensure the new weight stays within the min and max bounds
-                if (newWeight < minWeight) {
-                    connection.Weight = minWeight;
-                } else if (newWeight > maxWeight) {
-                    connection.Weight = maxWeight;
+                if (newWeight < Constants.MinVal) {
+                    connection.Weight = Constants.MinVal;
+                } else if (newWeight > Constants.MaxVal) {
+                    connection.Weight = Constants.MaxVal;
                 } else {
                     connection.Weight = newWeight;
                 }
@@ -55,7 +49,7 @@ public static class Mutation {
 
 
 
-    private static bool AddConnectionMutation(Genome genome, double minWeight, double maxWeight, Random random) {
+    private static bool AddConnectionMutation(Genome genome, Random random) {
         var numLoops = -1;
         const int maxLoops = 1000; // TODO determine this more intelligently?
         while (true) {
@@ -84,7 +78,7 @@ public static class Mutation {
 
             if (!areConnected) {
                 // Add the new connection to the genome
-                var weight = Math.Round(random.NextDouble() * (maxWeight - minWeight) + minWeight, 3);
+                var weight = Math.Round(random.NextDouble() * 2 - 1, 3);
                 // Uncomment this to enforce all connections going forward (ie disallowing recurrent connections)
                 // if (node1.Depth < node2.Depth) {
                 //     genome.AddConnection(node1, node2, weight, true);

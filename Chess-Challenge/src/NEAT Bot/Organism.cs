@@ -30,24 +30,60 @@ public class Genome {
         private readonly InnovationHandler _innovationHandler;
         private Random Random;
 
-        public Genome(int inputs, int outputs, InnovationHandler innovationHandler, Random random, double minWeight = -1, double maxWeight = 1) {
+        public Genome(InnovationHandler innovationHandler, Random random) {
             _innovationHandler = innovationHandler;
             this.Random = random;
             Connections = new List<Connection>();
             Nodes = new List<Node>();
-            for (var i = 0; i < inputs; i++) {
+            for (var i = 0; i < Constants.InputsCount; i++) {
                 AddNode("input", depth: 0);
             }
-            for (var i = 0; i < outputs; i++) {
+            for (var i = 0; i < Constants.OutputsCount; i++) {
                 AddNode("output", depth: 1);
                 for (var j = 0; j < Nodes.Count-(i+1); j++) {
                     var curIn = Nodes[j];
                     var curOut = Nodes[^1];
-                    var weight = Math.Round(Random.NextDouble() * (maxWeight - minWeight) + minWeight, 3);
+                    var weight = Math.Round(random.NextDouble() * 2 - 1, 3);
                     AddConnection(curIn, curOut, weight, true);
                 }
             }
         }
+
+        public double GeneticDifference(Genome genome2) {
+            var genome1InnovationNumbers = new HashSet<int>(Connections.Select(c => c.InnovationNumber));
+            var genome2InnovationNumbers = new HashSet<int>(genome2.Connections.Select(c => c.InnovationNumber));
+
+            // Calculate the smaller max innovation number
+            int maxInnovationNumber = Math.Min(genome1InnovationNumbers.Max(), genome2InnovationNumbers.Max());
+
+            var matchingInnovationNumbers = genome1InnovationNumbers.Intersect(genome2InnovationNumbers).ToList();
+
+            int disjointCount = genome1InnovationNumbers.Except(matchingInnovationNumbers).Count(n => n <= maxInnovationNumber)
+                                + genome2InnovationNumbers.Except(matchingInnovationNumbers).Count(n => n <= maxInnovationNumber);
+
+            int excessCount = genome1InnovationNumbers.Except(matchingInnovationNumbers).Count(n => n > maxInnovationNumber)
+                              + genome2InnovationNumbers.Except(matchingInnovationNumbers).Count(n => n > maxInnovationNumber);
+
+            double weightDifferenceSum = 0;
+            foreach (var innovationNumber in matchingInnovationNumbers) {
+                var genome1Weight = Connections.First(c => c.InnovationNumber == innovationNumber).Weight;
+                var genome2Weight = genome2.Connections.First(c => c.InnovationNumber == innovationNumber).Weight;
+                weightDifferenceSum += Math.Abs(genome1Weight - genome2Weight);
+            }
+
+            double averageWeightDifference = matchingInnovationNumbers.Count > 0 ? weightDifferenceSum / matchingInnovationNumbers.Count : 0;
+
+            int n = Math.Max(Connections.Count, genome2.Connections.Count);
+            if (n < 20) {
+                n = 1;
+            }
+
+            double geneticDistance = ((Constants.ExcessCoeff * excessCount) / n) + 
+                                     ((Constants.DisjointCoeff * disjointCount) / n) + 
+                                     (Constants.WeightCoeff * averageWeightDifference);
+            return geneticDistance;
+        }
+
 
         public Connection AddConnection(Node node1, Node node2, double weight, bool isEnabled) {
             var connKey = new Tuple<int, int>(node1.ID, node2.ID);

@@ -4,23 +4,15 @@ using System.Collections.Generic;
 namespace Chess_Challenge.NEAT_Bot; 
 
 public abstract class Trainer {
-    
-    // Setup hyperparameters
-    private const int PopulationSize = 20;
-    private const int InputsCount = 3;
-    private const int OutputsCount = 1;
-    private const double MinVal = -99.999;
-    private const double MaxVal = 99.999;
-
     public static void RunTraining(int maxGenerations) {
 
         int randomSeed = 1;
         Random random = new Random(randomSeed);
         
         // Initialization
-        InnovationHandler innovationHandler = new InnovationHandler(InputsCount, OutputsCount);
-        Population hostPopulation = new Population(PopulationSize, InputsCount, OutputsCount, MinVal, MaxVal, innovationHandler, random);
-        Population parasitePopulation = new Population(PopulationSize, InputsCount, OutputsCount, MinVal, MaxVal, innovationHandler, random);
+        InnovationHandler innovationHandler = new InnovationHandler();
+        Population hostPopulation = new Population(innovationHandler, random);
+        Population parasitePopulation = new Population(innovationHandler, random);
 
         List<Organism> hallOfFame = new List<Organism>();
 

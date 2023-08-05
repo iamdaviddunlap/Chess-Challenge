@@ -63,8 +63,92 @@ public class Population {
     }
 
 
-    public void Reproduce() {
-        // TODO implement Reproduce in Population
+    public void SelectAndReproduce() {
+        // TODO clear innovation maps before making new organisms
+        
+        double totalAvgFitness = 0;
+
+        // Dictionary to hold average fitness per species
+        Dictionary<int, double> speciesAverageFitness = new Dictionary<int, double>();
+
+        // Loop through species once, performing elimination and calculating total average fitness
+        foreach (var speciesId in SpeciesIds) {
+            EliminateSpeciesWeakest(speciesId);
+
+            double averageFitness = Organisms.Where(o => o.SpeciesId == speciesId).Average(o => o.Fitness);
+            totalAvgFitness += averageFitness;
+
+            speciesAverageFitness[speciesId] = averageFitness; // Store average fitness for later use
+        }
+
+        // At least MinAsexualOffspring offspring will be produced with asexual reproduction
+        // Probably a bit more will be made due to rounding in the calculation of numSpeciesOffspring
+        int numSexualOffspring = Constants.PopulationSize - Constants.MinAsexualOffspring;
+        
+        // Loop through species again, calculating the number of offspring for each species by sexual reproduction
+        var totalOffspring = 0;
+        var newOrganisms = new List<Organism>();
+        foreach (var speciesId in SpeciesIds) {
+            var speciesNewOrganisms = new List<Organism>();
+            var speciesOrganisms = Organisms.Where(o => o.SpeciesId == speciesId).ToList();
+            double averageFitness = speciesAverageFitness[speciesId]; // Retrieve stored average fitness
+            int numSpeciesOffspring = (int)((averageFitness / totalAvgFitness) * numSexualOffspring);
+            totalOffspring += numSpeciesOffspring;
+            if (speciesOrganisms.Count > 1) {
+                // Sexually reproduce species
+                for (int i = 0; i < numSpeciesOffspring; i++) {
+                    // Create pairs by selecting two random objects each time
+                    // Select two distinct organisms
+                    int index1 = -1, index2 = -1;
+                    while (index1 == index2) {
+                        index1 = Random.Next(speciesOrganisms.Count);
+                        index2 = Random.Next(speciesOrganisms.Count);
+                    }
+
+                    var offspring = speciesOrganisms[index1].Reproduce(Random, speciesOrganisms[index2]);
+                    speciesNewOrganisms.Add(offspring);
+                }
+            }
+            else {
+                // If there is only 1 organism in the species, we must produce more with asexual reproduction
+                for (int i = 0; i < numSpeciesOffspring; i++) {
+                    var offspring = speciesOrganisms[0].Reproduce(Random);
+                    speciesNewOrganisms.Add(offspring);
+                }
+            }
+            newOrganisms.AddRange(speciesNewOrganisms);
+        }
+        
+        // Fill in the rest of the population by having the top organisms asexually reproduce
+        int remainder = Constants.PopulationSize - totalOffspring;
+        var asexualParents = Organisms.OrderByDescending(o => o.Fitness).Take(remainder).ToList();
+        foreach (var parent in asexualParents) {
+            var offspring = parent.Reproduce(Random);
+            newOrganisms.Add(offspring);
+        }
+
+        var x = 1;
+        // TODO do something with newOrganisms
+        }
+        
+    public void EliminateSpeciesWeakest(int speciesId) {
+        // Use LINQ to filter Organisms by SpeciesId and then sort by Fitness in descending order
+        var speciesOrganisms = Organisms.Where(o => o.SpeciesId == speciesId).OrderByDescending(o => o.Fitness).ToList();
+
+        // Determine the cut-off index
+        int cutoffIndex = (int)(speciesOrganisms.Count * Constants.SpeciesElitePercentage);
+    
+        // If the species has two or more organisms, keep at least 2, otherwise keep the top %
+        if (speciesOrganisms.Count >= 2) {
+            cutoffIndex = Math.Max(cutoffIndex, 2);
+        } else if (speciesOrganisms.Count == 1) {
+            cutoffIndex = 1;
+        }
+
+        // Iterate from the cutoff index to the end, removing each organism from the Organisms list
+        for (int i = speciesOrganisms.Count - 1; i >= cutoffIndex; i--) {
+            Organisms.Remove(speciesOrganisms[i]);
+        }
     }
 
     public void Speciate() {

@@ -32,4 +32,8 @@ public static class Constants {
     public const double FitnessRewardWin = 2.0;
     public const double FitnessRewardDraw = 1.0;
     public const double FitnessRewardLoss = 0.0;
+
+    public const int MinAsexualOffspring = 3;
+    public const double SpeciesElitePercentage = 0.2;
+    public const double InheritDisableChance = 0.75;
 }

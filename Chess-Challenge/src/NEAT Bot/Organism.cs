@@ -22,6 +22,72 @@ public class Organism {
         OrganismId = _innovationHandler.GetNextOrganismId();
     }
     
+        public Organism Reproduce(Random random, Organism? coParent = null) {
+        Genome offspringGenome;
+        if (coParent == null) {  // Asexual reproduction
+            offspringGenome = Genome.Clone();
+            Mutation.MutateGenome(offspringGenome, random);
+        }
+        else // Sexual reproduction
+        {
+            offspringGenome = new Genome(_innovationHandler, random, addConnections: false);
+            
+            // Handle nodes
+            foreach (var nodeId in Genome.Nodes.Where(n => n.Type == "hidden").Select(n => n.ID)
+                         .Union(coParent.Genome.Nodes.Where(n => n.Type == "hidden").Select(n => n.ID))) {
+                Genome.Node? parentNode1 = Genome.Nodes.FirstOrDefault(n => n.ID == nodeId);
+                Genome.Node? parentNode2 = coParent.Genome.Nodes.FirstOrDefault(n => n.ID == nodeId);
+
+                Genome.Node newNode;
+                if (parentNode1 != null && parentNode2 != null) { // Matching nodes
+                    newNode = random.NextDouble() < 0.5 ? parentNode1 : parentNode2;
+                } else { // Disjoint or excess nodes
+                    newNode = parentNode1 ?? parentNode2;
+                }
+
+                offspringGenome.AddNode(newNode.Type, newNode.Depth, nodeId: newNode.ID);
+            }
+
+            var genome1InnovationNumbers = Genome.Connections.Select(c => c.InnovationNumber).ToList();
+            var genome2InnovationNumbers = coParent.Genome.Connections.Select(c => c.InnovationNumber).ToList();
+
+            // Calculate the smaller max innovation number
+            int maxInnovationNumber = Math.Min(genome1InnovationNumbers.Max(), genome2InnovationNumbers.Max());
+
+            // Identify matching genes
+            var matchingConnections = Genome.Connections
+                .Where(c => genome2InnovationNumbers.Contains(c.InnovationNumber))
+                .ToList();
+            
+            // Determine the more fit parent for disjoint and excess genes
+            Organism moreFitParent = Fitness > coParent.Fitness ? this : coParent;
+
+            // Handle matching genes
+            foreach (var matchingConnection in matchingConnections) {
+                var connToUse = random.NextDouble() < 0.5 ? matchingConnection : coParent.Genome.Connections.First(c => c.InnovationNumber == matchingConnection.InnovationNumber);
+                var inNode = offspringGenome.GetNodeById(connToUse.Nodes.Item1.ID);
+                var outNode = offspringGenome.GetNodeById(connToUse.Nodes.Item2.ID);
+                var doEnable = connToUse.IsEnabled;
+                if (!doEnable && random.NextDouble() > Constants.InheritDisableChance) {
+                    // Chance to re-enable disabled connection
+                    doEnable = true;
+                }
+                offspringGenome.AddConnection(inNode, outNode, connToUse.Weight, doEnable);
+            }
+
+            // Handle disjoint and excess genes
+            foreach (var connection in Genome.Connections.Concat(coParent.Genome.Connections)) {
+                if (matchingConnections.All(c => c.InnovationNumber != connection.InnovationNumber) && moreFitParent.Genome.Connections.Contains(connection)) {
+                    var inNode = offspringGenome.GetNodeById(connection.Nodes.Item1.ID);
+                    var outNode = offspringGenome.GetNodeById(connection.Nodes.Item2.ID);
+                    offspringGenome.AddConnection(inNode, outNode, connection.Weight, connection.IsEnabled);
+                }
+            }
+        }
+
+        return new Organism(offspringGenome, _innovationHandler);
+    }
+    
     public override string ToString() {
         return $"Organism #{OrganismId}";
     }
@@ -34,7 +100,7 @@ public class Genome {
         private readonly InnovationHandler _innovationHandler;
         private Random Random;
 
-        public Genome(InnovationHandler innovationHandler, Random random) {
+        public Genome(InnovationHandler innovationHandler, Random random, bool addConnections = true) {
             _innovationHandler = innovationHandler;
             this.Random = random;
             Connections = new List<Connection>();
@@ -44,13 +110,37 @@ public class Genome {
             }
             for (var i = 0; i < Constants.OutputsCount; i++) {
                 AddNode("output", depth: 1);
-                for (var j = 0; j < Nodes.Count-(i+1); j++) {
-                    var curIn = Nodes[j];
-                    var curOut = Nodes[^1];
-                    var weight = Math.Round(random.NextDouble() * 2 - 1, 3);
-                    AddConnection(curIn, curOut, weight, true);
+                if (addConnections) {
+                    for (var j = 0; j < Nodes.Count - (i + 1); j++) {
+                        var curIn = Nodes[j];
+                        var curOut = Nodes[^1];
+                        var weight = Math.Round(random.NextDouble() * 2 - 1, 3);
+                        AddConnection(curIn, curOut, weight, true);
+                    }
                 }
             }
+        }
+        
+        public Node? GetNodeById(int id) {
+            return Nodes.FirstOrDefault(node => node.ID == id);
+        }
+        
+        public Genome Clone() {
+            Genome clonedGenome = new Genome(_innovationHandler, Random);
+        
+            // Cloning Nodes
+            foreach (var node in Nodes) {
+                clonedGenome.AddNode(node.Type, node.Depth);
+            }
+        
+            // Cloning Connections
+            foreach (var connection in Connections) {
+                var node1 = clonedGenome.Nodes.First(n => n.ID == connection.Nodes.Item1.ID);
+                var node2 = clonedGenome.Nodes.First(n => n.ID == connection.Nodes.Item2.ID);
+                clonedGenome.AddConnection(node1, node2, connection.Weight, connection.IsEnabled);
+            }
+
+            return clonedGenome;
         }
 
         public double GeneticDifference(Genome genome2) {
@@ -98,14 +188,15 @@ public class Genome {
             return conn;
         }
         
-        public Node AddNode(string type, int depth, Connection? sourceConnection = null) {
-            int nodeId;
-            if (sourceConnection == null) {
-                nodeId = Nodes.Count;
-            }
-            else {
-                nodeId = _innovationHandler.AssignNodeId(
-                    new Tuple<int, int>(sourceConnection.Nodes.Item1.ID, sourceConnection.Nodes.Item2.ID));
+        public Node AddNode(string type, int depth, int nodeId = -1, Connection? sourceConnection = null) {
+            if(nodeId == -1) {
+                if (sourceConnection == null) {
+                    nodeId = Nodes.Count;
+                }
+                else {
+                    nodeId = _innovationHandler.AssignNodeId(
+                        new Tuple<int, int>(sourceConnection.Nodes.Item1.ID, sourceConnection.Nodes.Item2.ID));
+                }
             }
             var node = new Node { ID = nodeId, Type = type, Depth = depth};
             Nodes.Add(node);

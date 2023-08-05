@@ -61,21 +61,16 @@ public abstract class Trainer {
             Fitness.AssignFitnesses(hostPopulation, allHostResults);
             Fitness.AssignFitnesses(parasitePopulation, allParasiteResults);
 
-            var x = 1;
-
             // TODO everything below here is basically pseudocode, but roughly what I want
-            // // Form species in both populations
-            // hostPopulation.Speciate();
-            // parasitePopulation.Speciate();
-            //
-            // // Selection and breeding
-            // foreach (Population population in new List<Population>{hostPopulation, parasitePopulation}) {
-            //     foreach (Species species in population.Species) {
-            //         species.EliminateWeakest();
-            //         List<NeuralNetworkBot> offspring = species.Breed();
-            //         population.ReplacePopulation(offspring);
-            //     }
-            // }
+
+            // Selection and breeding
+            foreach (Population population in new List<Population>{hostPopulation, parasitePopulation}) {
+                population.SelectAndReproduce();
+            }
+            
+            // Form species in both populations
+            hostPopulation.Speciate();
+            parasitePopulation.Speciate();
         }
     }
 }

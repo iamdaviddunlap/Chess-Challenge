@@ -53,7 +53,7 @@ public static class Fitness {
 
     public static void AssignFitnesses(Population hostPopulation, Dictionary<Tuple<Organism, Organism, bool>, int> hostGameResults) {
         
-        // Competitive Fitness Sharing: Find the number of unique hosts that defeat each parasite
+        // Find the number of unique hosts that defeat each parasite
         Dictionary<Organism, HashSet<Organism>> parasiteDefeatCount = new Dictionary<Organism, HashSet<Organism>>();
         foreach (var result in hostGameResults) {
             var host = result.Key.Item1;
@@ -67,24 +67,22 @@ public static class Fitness {
             }
         }
 
-        // Apply the Competitive Fitness Sharing to the raw fitness
+        // Calculate fitness for each organism
         foreach (var organism in hostPopulation.Organisms) {
             var totalFitnessReward = 0.0;
             foreach (var result in hostGameResults.Where(r => r.Key.Item1 == organism)) {
                 var parasite = result.Key.Item2;
                 int gameResult = result.Value;
+                
+                // Competitive fitness sharing. The reward for defeating a parasite is 1/N * reward, where N is the
+                // number of unique hosts that can defeat this parasite, and reward is the reward assigned for the game result
                 int uniqueDefeats = parasiteDefeatCount[parasite].Count;
                 double rewardModifier = 1.0 / uniqueDefeats;
                 totalFitnessReward += rewardModifier * ConvertGameResultToFitness(gameResult);
             }
-
-            organism.Fitness = totalFitnessReward;
-        }
-
-        // Explicit Fitness Sharing: Divide fitness by the number of organisms in the same species
-        foreach (var organism in hostPopulation.Organisms) {
+            // Explicit fitness sharing. The total fitness is divided by the number of organisms in the same species
             int speciesCount = hostPopulation.Organisms.Count(o => o.SpeciesId == organism.SpeciesId);
-            organism.Fitness /= speciesCount;
+            organism.Fitness = totalFitnessReward / speciesCount;
         }
     }
 }

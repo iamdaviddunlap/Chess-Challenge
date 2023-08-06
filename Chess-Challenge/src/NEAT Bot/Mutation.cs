@@ -1,24 +1,34 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Chess_Challenge.NEAT_Bot; 
 
 public static class Mutation {
     
     public static void MutateGenome(Genome genome, Random random) {
-
-        // Check if we should mutate weights
-        if (random.NextDouble() < Constants.MutateWeightsProb) {
-            MutateWeights(genome, random);
-        }
-
-        // Check if we should add a connection
-        if (random.NextDouble() < Constants.AddConnectionProb) {
-            AddConnectionMutation(genome, random);
-        }
-
-        // Check if we should add a node
-        if (random.NextDouble() < Constants.AddNodeProb) {
+        
+        if (random.NextDouble() < Constants.AddNodeProb) {  // Check if we should add a node
             AddNodeMutation(genome, random);
+        } else if (random.NextDouble() < Constants.AddConnectionProb) {
+            AddConnectionMutation(genome, random);
+        } else {
+            // Do any number of other non-structural mutations
+            if (random.NextDouble() < Constants.MutateWeightsProb) {
+                MutateWeights(genome, random);
+            }
+            if (random.NextDouble() < Constants.MutateBiasesProb) { 
+                MutateBiases(genome, random);
+            }
+            if (random.NextDouble() < Constants.MutateToggleEnableProb) {
+                MutateToggleEnable(genome, random);
+            }
+            if (random.NextDouble() < Constants.MutateReenableProb) {
+                MutateGeneReenable(genome, random);
+            }
+            if (random.NextDouble() < Constants.MutateRemoveConnectionProb) {
+                MutateRemoveConnection(genome, random);
+            }
         }
     }
     
@@ -45,10 +55,89 @@ public static class Mutation {
             }
         }
     }
+    
+    public static void MutateBiases(Genome genome, Random random) {
+        foreach (var node in genome.Nodes) {
+            // Skip input nodes
+            if (node.Type == "input") {
+                continue;
+            }
 
+            // Check if we should perturb this node's bias
+            if (random.NextDouble() < Constants.BiasPerturbChance) {
+                // Perturb the bias
+                var perturbAmount = (random.NextDouble() * 2 - 1) * Constants.BiasPerturbValue;
+                var newBias = node.Bias + perturbAmount;
 
+                // Ensure the new bias stays within the min and max bounds
+                if (newBias < Constants.MinVal) {
+                    node.Bias = Constants.MinVal;
+                } else if (newBias > Constants.MaxVal) {
+                    node.Bias = Constants.MaxVal;
+                } else {
+                    node.Bias = newBias;
+                }
 
+                // Round the bias to 3 decimal places
+                node.Bias = Math.Round(node.Bias, 3);
+            }
+        }
+    }
 
+    public static void MutateToggleEnable(Genome genome, Random random) {
+        // Pick a random connection
+        var connection = genome.Connections[random.Next(genome.Connections.Count)];
+    
+        // Toggle the IsEnabled attribute
+        connection.IsEnabled = !connection.IsEnabled;
+    }
+
+    public static void MutateGeneReenable(Genome genome, Random random) {
+        // Find all disabled connections
+        var disabledConnections = genome.Connections.Where(conn => !conn.IsEnabled).ToList();
+
+        // If there are any disabled connections
+        if (disabledConnections.Count > 0) {
+            // Pick one at random and enable it
+            var connectionToReenable = disabledConnections[random.Next(disabledConnections.Count)];
+            connectionToReenable.IsEnabled = true;
+        }
+    }
+    
+    public static void MutateRemoveConnection(Genome genome, Random random) {
+        // Create dictionaries to count how many times each node appears as a source and a target
+        Dictionary<Genome.Node, int> sourceCount = new Dictionary<Genome.Node, int>();
+        Dictionary<Genome.Node, int> targetCount = new Dictionary<Genome.Node, int>();
+
+        foreach (var conn in genome.Connections) {
+            var sourceNode = conn.Nodes.Item1;
+            var targetNode = conn.Nodes.Item2;
+
+            if (sourceCount.ContainsKey(sourceNode)) {
+                sourceCount[sourceNode]++;
+            } else {
+                sourceCount[sourceNode] = 1;
+            }
+
+            if (targetCount.ContainsKey(targetNode)) {
+                targetCount[targetNode]++;
+            } else {
+                targetCount[targetNode] = 1;
+            }
+        }
+
+        // Filter out the connections where both the source and the target appear more than once
+        var eligibleConnections = genome.Connections.Where(conn => 
+            sourceCount[conn.Nodes.Item1] > 1 && targetCount[conn.Nodes.Item2] > 1).ToList();
+
+        // If there are any eligible connections
+        if (eligibleConnections.Count > 0) {
+            // Pick one at random and remove it
+            var connectionToRemove = eligibleConnections[random.Next(eligibleConnections.Count)];
+            genome.Connections.Remove(connectionToRemove);
+        }
+    }
+    
     private static bool AddConnectionMutation(Genome genome, Random random) {
         var numLoops = -1;
         const int maxLoops = 1000; // TODO determine this more intelligently?

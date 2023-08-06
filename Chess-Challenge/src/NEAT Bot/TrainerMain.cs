@@ -57,20 +57,25 @@ public abstract class Trainer {
                 }
             }
             
-            // Get some metrics about how things are going
-            Organism hostChamp = hostPopulation.GetSuperchamp();
-            Organism parasiteChamp = hostPopulation.GetSuperchamp();
-            var hostLoss = GameController.XORSinglePlayer(hostChamp, random);
-            var parasiteLoss = GameController.XORSinglePlayer(hostChamp, random);
-            Console.WriteLine($"Generation {generation}: host champion loss: {hostLoss}");
-            Console.WriteLine($"Generation {generation}: parasite champion loss: {parasiteLoss}");
-            Console.WriteLine("----------------------------");
-            
             // Calculate fitnesses for the organisms in each population
             Fitness.AssignFitnesses(hostPopulation, allHostResults);
             Fitness.AssignFitnesses(parasitePopulation, allParasiteResults);
+            
+            // Get some metrics about how things are going
+            Organism hostChamp = hostPopulation.GetSuperchamp();
+            Organism parasiteChamp = parasitePopulation.GetSuperchamp();
+            var hostLoss = GameController.XORSinglePlayer(hostChamp, random);
+            var parasiteLoss = GameController.XORSinglePlayer(parasiteChamp, random);
+            
+            var overallChamp = hostLoss < parasiteLoss ? hostChamp : parasiteChamp;
+            hallOfFame.Add(overallChamp);
+            
+            Console.WriteLine($"Generation {generation}: host champion loss: {hostLoss}");
+            Console.WriteLine($"Generation {generation}: parasite champion loss: {parasiteLoss}");
+            Console.WriteLine("----------------------------");
 
             // Selection and breeding
+            
             foreach (Population population in new List<Population>{hostPopulation, parasitePopulation}) {
                 population.SelectAndReproduce();
             }

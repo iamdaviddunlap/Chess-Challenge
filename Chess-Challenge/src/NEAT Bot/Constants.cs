@@ -25,7 +25,7 @@ public static class Constants {
     public const double ExcessCoeff = 2.0;
     public const double WeightCoeff = 1.0;
 
-    public static double SpeciesCompatThresh = 6.0;  // Ken Stanley set this to 6.0
+    public static double SpeciesCompatThreshInitial = 6.0;  // Ken Stanley set this to 6.0
     public const double SpeciesCompatModifier = 0.3; // TOD0 use this; every generation the SpeciesCompatThresh is adjusted by this much
     public const int SpeciesCountTarget = 10;  // I haven't tuned this
 
@@ -33,7 +33,7 @@ public static class Constants {
     public const double FitnessRewardDraw = 1.0;
     public const double FitnessRewardLoss = 0.0;
     
-    public const int MinSuperchampOffspring = 3;
+    public const int SuperchampOffspring = 3;
     public const double MutateOnlyProb = 0.25;
     public const double MateOnlyProb = 0.2;
     public const double CrossSpeciesMatingProb = 0.05;

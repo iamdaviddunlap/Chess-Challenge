@@ -177,17 +177,23 @@ public class Genome {
                 var genome2Weight = genome2.Connections.First(c => c.InnovationNumber == innovationNumber).Weight;
                 weightDifferenceSum += Math.Abs(genome1Weight - genome2Weight);
             }
-
             double averageWeightDifference = matchingInnovationNumbers.Count > 0 ? weightDifferenceSum / matchingInnovationNumbers.Count : 0;
+            
+            var sharedNodes = Nodes.Where(node1 => genome2.Nodes.Any(node2 => node2.ID == node1.ID)).ToList();
+            double biasDifferenceSum = 0;
+            foreach (var sharedNode in sharedNodes) {
+                var genome1Bias = Nodes.First(n => n.ID == sharedNode.ID).Bias;
+                var genome2Bias = genome2.Nodes.First(n => n.ID == sharedNode.ID).Bias;
+                biasDifferenceSum += Math.Abs(genome1Bias - genome2Bias);
+            }
+            double averageBiasDifference = sharedNodes.Count > 0 ? biasDifferenceSum / sharedNodes.Count : 0;
+            double averageCombinedDifference = (averageWeightDifference + averageBiasDifference) / 2.0;
 
             int n = Math.Max(Connections.Count, genome2.Connections.Count);
-            if (n < 20) {
-                n = 1;
-            }
 
             double geneticDistance = ((Constants.ExcessCoeff * excessCount) / n) + 
                                      ((Constants.DisjointCoeff * disjointCount) / n) + 
-                                     (Constants.WeightCoeff * averageWeightDifference);
+                                     (Constants.WeightCoeff * averageCombinedDifference);
             return geneticDistance;
         }
 

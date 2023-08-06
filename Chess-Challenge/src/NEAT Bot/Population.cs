@@ -9,6 +9,7 @@ public class Population {
     private Random Random;
     private InnovationHandler _innovationHandler;
     private int _curSpeciesId;
+    private double _speciesCompatThresh = Constants.SpeciesCompatThreshInitial;
     public List<Organism> Organisms { get; } = new();  // List of all organisms in this population
     public List<Organism> SpeciesReps { get; } = new();  // List containing 1 representative of each species
     public List<int> SpeciesIds = new();  // List of all speciesIds that have been assigned to organisms in this population
@@ -70,11 +71,9 @@ public class Population {
         Dictionary<int, double> speciesAverageFitness = new Dictionary<int, double>();
         double totalAvgFitness = 0;
         
-        // Clear species reps and unique innovation maps
+        // Clear species reps
         SpeciesReps.Clear();
-        _innovationHandler.ConnectionIdMapping.Clear();
-        _innovationHandler.NodeIdMapping.Clear();
-        
+
         // First pass over species list. Eliminate the weakest, find the average fitness, save the species champ, and
         // reassign the species rep as a random member of the species
         var speciesChamps = new List<Organism>();
@@ -94,7 +93,7 @@ public class Population {
         var superChamp = Organisms.OrderByDescending(o => o.Fitness).First();
 
         // create special clones from super champ with no structural changes, only weight changes
-        for (int i = 0; i < Constants.MinSuperchampOffspring; i++) {
+        for (int i = 0; i < Constants.SuperchampOffspring; i++) {
             var newSuperchampGenome = superChamp.Genome.Clone();
             Mutation.MutateWeights(newSuperchampGenome, Random);
             var newSuperchampChild = new Organism(newSuperchampGenome, _innovationHandler);
@@ -119,7 +118,7 @@ public class Population {
                 if (speciesOrganisms.Count > 1 && Random.NextDouble() > Constants.MutateOnlyProb) {
                     // Sexually reproduce
                     Organism offspring;
-                    if (Random.NextDouble() < Constants.CrossSpeciesMatingProb) {
+                    if (SpeciesIds.Count > 1 && Random.NextDouble() < Constants.CrossSpeciesMatingProb) {
                         // Do cross-species mating. Pick a random parent from this species and the champ from a different one
                         int otherSpeciesId;
                         do {  // Select a random species that is not the current one
@@ -171,9 +170,10 @@ public class Population {
         // Replace the old population with the new one
         Organisms.Clear();
         Organisms.AddRange(newOrganisms);
-    
-        // Perform speciation on new organisms
-        Speciate();
+        
+        // Clear unique innovation maps
+        _innovationHandler.ConnectionIdMapping.Clear();
+        _innovationHandler.NodeIdMapping.Clear();
     }
 
     public void EliminateSpeciesWeakest(int speciesId) {
@@ -201,7 +201,7 @@ public class Population {
             var foundSpecies = false;
             foreach (var speciesRep in SpeciesReps) {
                 var geneDifference = organism.Genome.GeneticDifference(speciesRep.Genome);
-                if (geneDifference <= Constants.SpeciesCompatThresh) {
+                if (geneDifference <= _speciesCompatThresh) {
                     organism.SpeciesId = speciesRep.SpeciesId;
                     foundSpecies = true;
                     break;
@@ -228,13 +228,13 @@ public class Population {
         
         // Adjust SpeciesCompatThresh to target SpeciesCountTarget number of species
         if (SpeciesIds.Count < Constants.SpeciesCountTarget) {
-            Constants.SpeciesCompatThresh -= Constants.SpeciesCompatModifier;
+            _speciesCompatThresh -= Constants.SpeciesCompatModifier;
         } else if (SpeciesIds.Count > Constants.SpeciesCountTarget) {
-            Constants.SpeciesCompatThresh += Constants.SpeciesCompatModifier;
+            _speciesCompatThresh += Constants.SpeciesCompatModifier;
         }
         // Ensure the SpeciesCompatThresh can't get too low
-        if (Constants.SpeciesCompatThresh < Constants.SpeciesCompatModifier) {
-            Constants.SpeciesCompatThresh = Constants.SpeciesCompatModifier;
+        if (_speciesCompatThresh < Constants.SpeciesCompatModifier) {
+            _speciesCompatThresh = Constants.SpeciesCompatModifier;
         }
     }
 

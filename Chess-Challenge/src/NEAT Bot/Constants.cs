@@ -1,7 +1,7 @@
 ﻿namespace Chess_Challenge.NEAT_Bot; 
 
 public static class Constants {
-    public const int PopulationSize = 50;
+    public const int PopulationSize = 200;
     public const int InputsCount = 3;
     public const int OutputsCount = 1;
     public const double MinVal = -99.999;
@@ -32,12 +32,13 @@ public static class Constants {
     public const double FitnessRewardWin = 2.0;
     public const double FitnessRewardDraw = 1.0;
     public const double FitnessRewardLoss = 0.0;
-
-    public const int MinAsexualOffspring = 3;
-    public const double SpeciesElitePercentage = 0.2;
+    
+    public const int MinSuperchampOffspring = 3;
+    public const double MutateOnlyProb = 0.25;
+    public const double MateOnlyProb = 0.2;
+    public const double CrossSpeciesMatingProb = 0.05;
+    public const double SpeciesElitePercentage = 0.2;  // What % of each species to keep and allow to reproduce
     public const double InheritDisableChance = 0.75;
 
-    public const double MateMultipointProb = 0.6;  // Ken Stanley used 0.6
-    public const double MateMultipointAvgProb = 0.2;  // Ken Stanley used 0.4
-    public const double MateSinglepointProb = 0.2; // Ken Stanley used 0, ie turned this off
+    public const double MateAvgGenesProb = 0.4; // The chance that parent genes will be averaged instead of selection one or the other
 }

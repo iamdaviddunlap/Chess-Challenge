@@ -64,55 +64,93 @@ public class Population {
 
 
     public void SelectAndReproduce() {
-        // TODO clear innovation maps before making new organisms
+        var newOrganisms = new List<Organism>();
         
-        double totalAvgFitness = 0;
-
         // Dictionary to hold average fitness per species
         Dictionary<int, double> speciesAverageFitness = new Dictionary<int, double>();
-
-        // Loop through species once, performing elimination and calculating total average fitness
+        double totalAvgFitness = 0;
+        
+        // Clear species reps and unique innovation maps
+        SpeciesReps.Clear();
+        _innovationHandler.ConnectionIdMapping.Clear();
+        _innovationHandler.NodeIdMapping.Clear();
+        
+        // First pass over species list. Eliminate the weakest, find the average fitness, save the species champ, and
+        // reassign the species rep as a random member of the species
+        var speciesChamps = new List<Organism>();
         foreach (var speciesId in SpeciesIds) {
             EliminateSpeciesWeakest(speciesId);
-
-            double averageFitness = Organisms.Where(o => o.SpeciesId == speciesId).Average(o => o.Fitness);
-            totalAvgFitness += averageFitness;
-
-            speciesAverageFitness[speciesId] = averageFitness; // Store average fitness for later use
+            var speciesOrganisms = Organisms.Where(o => o.SpeciesId == speciesId).ToList();
+            var avgFitness = speciesOrganisms.Average(o => o.Fitness);
+            var speciesChamp = speciesOrganisms.OrderByDescending(o => o.Fitness).First();
+            var speciesRep = speciesOrganisms[Random.Next(speciesOrganisms.Count)];
+            SpeciesReps.Add(speciesRep);
+            speciesChamps.Add(speciesChamp);
+            speciesAverageFitness[speciesId] = avgFitness;
+            totalAvgFitness += avgFitness;
         }
 
-        // At least MinAsexualOffspring offspring will be produced with asexual reproduction
-        // Probably a bit more will be made due to rounding in the calculation of numSpeciesOffspring
-        int numSexualOffspring = Constants.PopulationSize - Constants.MinAsexualOffspring;
+        // Find the "superchamp" ie the organism with the greatest fitness in the entire population
+        var superChamp = Organisms.OrderByDescending(o => o.Fitness).First();
+
+        // create special clones from super champ with no structural changes, only weight changes
+        for (int i = 0; i < Constants.MinSuperchampOffspring; i++) {
+            var newSuperchampGenome = superChamp.Genome.Clone();
+            Mutation.MutateWeights(newSuperchampGenome, Random);
+            var newSuperchampChild = new Organism(newSuperchampGenome, _innovationHandler);
+            newOrganisms.Add(newSuperchampChild);
+        }
+
+        // directly clone the species champions
+        foreach (var champ in speciesChamps) {
+            var clonedGenome = champ.Genome.Clone();
+            var newOrganism = new Organism(clonedGenome, _innovationHandler);
+            newOrganisms.Add(newOrganism);
+        }
+
+        int remaining = Constants.PopulationSize - newOrganisms.Count;
         
-        // Loop through species again, calculating the number of offspring for each species by sexual reproduction
-        var totalOffspring = 0;
-        var newOrganisms = new List<Organism>();
         foreach (var speciesId in SpeciesIds) {
             var speciesNewOrganisms = new List<Organism>();
             var speciesOrganisms = Organisms.Where(o => o.SpeciesId == speciesId).ToList();
             double averageFitness = speciesAverageFitness[speciesId]; // Retrieve stored average fitness
-            int numSpeciesOffspring = (int)((averageFitness / totalAvgFitness) * numSexualOffspring);
-            totalOffspring += numSpeciesOffspring;
-            if (speciesOrganisms.Count > 1) {
-                // Sexually reproduce species
-                for (int i = 0; i < numSpeciesOffspring; i++) {
-                    // Create pairs by selecting two random objects each time
-                    // Select two distinct organisms
-                    int index1 = -1, index2 = -1;
-                    while (index1 == index2) {
-                        index1 = Random.Next(speciesOrganisms.Count);
-                        index2 = Random.Next(speciesOrganisms.Count);
-                    }
+            int numSpeciesOffspring = Math.Max((int)((averageFitness / totalAvgFitness) * remaining), 1);
+            for (int i = 0; i < numSpeciesOffspring; i++) {
+                if (speciesOrganisms.Count > 1 && Random.NextDouble() > Constants.MutateOnlyProb) {
+                    // Sexually reproduce
+                    Organism offspring;
+                    if (Random.NextDouble() < Constants.CrossSpeciesMatingProb) {
+                        // Do cross-species mating. Pick a random parent from this species and the champ from a different one
+                        int otherSpeciesId;
+                        do {  // Select a random species that is not the current one
+                            otherSpeciesId = SpeciesIds[Random.Next(SpeciesIds.Count)];
+                        } while (otherSpeciesId == speciesId);
+                        // Select the champion from the other species
+                        var champOrganism = speciesChamps.First(o => o.SpeciesId == otherSpeciesId);
+                        
+                        var index = Random.Next(speciesOrganisms.Count);
+                        offspring = speciesOrganisms[index].Reproduce(Random, champOrganism);
+                    } else {
+                        var index1 = -1;
+                        var index2 = -1;
+                        while (index1 == index2) {
+                            index1 = Random.Next(speciesOrganisms.Count);
+                            index2 = Random.Next(speciesOrganisms.Count);
+                        }
 
-                    var offspring = speciesOrganisms[index1].Reproduce(Random, speciesOrganisms[index2]);
+                        offspring = speciesOrganisms[index1].Reproduce(Random, speciesOrganisms[index2]);
+                    }
+                    // Decide whether or not to mutate baby
+                    if (Random.NextDouble() > Constants.MateOnlyProb) {
+                        Mutation.MutateGenome(offspring.Genome, Random);
+                    }
                     speciesNewOrganisms.Add(offspring);
                 }
-            }
-            else {
-                // If there is only 1 organism in the species, we must produce more with asexual reproduction
-                for (int i = 0; i < numSpeciesOffspring; i++) {
-                    var offspring = speciesOrganisms[0].Reproduce(Random);
+                else {
+                    // Asexually reproduce
+                    // This happens if there is only 1 organism in the species or based on MutateOnlyProb
+                    var index = Random.Next(speciesOrganisms.Count);
+                    var offspring = speciesOrganisms[index].Reproduce(Random);
                     speciesNewOrganisms.Add(offspring);
                 }
             }
@@ -120,17 +158,24 @@ public class Population {
         }
         
         // Fill in the rest of the population by having the top organisms asexually reproduce
-        int remainder = Constants.PopulationSize - totalOffspring;
-        var asexualParents = Organisms.OrderByDescending(o => o.Fitness).Take(remainder).ToList();
+        remaining = Constants.PopulationSize - newOrganisms.Count;
+        var asexualParents = Organisms.OrderByDescending(o => o.Fitness).Take(remaining).ToList();
         foreach (var parent in asexualParents) {
             var offspring = parent.Reproduce(Random);
             newOrganisms.Add(offspring);
         }
-
-        var x = 1;
-        // TODO do something with newOrganisms
-        }
         
+        // Cut off organisms if we created too many
+        newOrganisms = newOrganisms.Take(Constants.PopulationSize).ToList();
+
+        // Replace the old population with the new one
+        Organisms.Clear();
+        Organisms.AddRange(newOrganisms);
+    
+        // Perform speciation on new organisms
+        Speciate();
+    }
+
     public void EliminateSpeciesWeakest(int speciesId) {
         // Use LINQ to filter Organisms by SpeciesId and then sort by Fitness in descending order
         var speciesOrganisms = Organisms.Where(o => o.SpeciesId == speciesId).OrderByDescending(o => o.Fitness).ToList();
@@ -167,7 +212,29 @@ public class Population {
             var newId = GetNextSpeciesId();
             organism.SpeciesId = newId;
             SpeciesReps.Add(organism);
-            SpeciesIds.Add(newId);
+        }
+
+        // Clear the SpeciesIds list
+        SpeciesIds.Clear();
+
+        // Assign new unique species IDs by going through the Organisms list
+        var uniqueSpeciesIds = Organisms.Select(o => o.SpeciesId).Distinct();
+
+        // Replace the SpeciesIds list with the new unique species IDs
+        SpeciesIds.AddRange(uniqueSpeciesIds);
+
+        // Remove organisms from SpeciesReps that are no longer representatives of any species
+        SpeciesReps.RemoveAll(rep => !SpeciesIds.Contains(rep.SpeciesId));
+        
+        // Adjust SpeciesCompatThresh to target SpeciesCountTarget number of species
+        if (SpeciesIds.Count < Constants.SpeciesCountTarget) {
+            Constants.SpeciesCompatThresh -= Constants.SpeciesCompatModifier;
+        } else if (SpeciesIds.Count > Constants.SpeciesCountTarget) {
+            Constants.SpeciesCompatThresh += Constants.SpeciesCompatModifier;
+        }
+        // Ensure the SpeciesCompatThresh can't get too low
+        if (Constants.SpeciesCompatThresh < Constants.SpeciesCompatModifier) {
+            Constants.SpeciesCompatThresh = Constants.SpeciesCompatModifier;
         }
     }
 

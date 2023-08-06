@@ -22,7 +22,7 @@ public static class Mutation {
         }
     }
     
-    private static void MutateWeights(Genome genome, Random random) {
+    public static void MutateWeights(Genome genome, Random random) {
 
         foreach (var connection in genome.Connections) {
             // Check if we should perturb this connection weight

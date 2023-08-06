@@ -57,11 +57,18 @@ public abstract class Trainer {
                 }
             }
             
+            // Get some metrics about how things are going
+            Organism hostChamp = hostPopulation.GetSuperchamp();
+            Organism parasiteChamp = hostPopulation.GetSuperchamp();
+            var hostLoss = GameController.XORSinglePlayer(hostChamp, random);
+            var parasiteLoss = GameController.XORSinglePlayer(hostChamp, random);
+            Console.WriteLine($"Generation {generation}: host champion loss: {hostLoss}");
+            Console.WriteLine($"Generation {generation}: parasite champion loss: {parasiteLoss}");
+            Console.WriteLine("----------------------------");
+            
             // Calculate fitnesses for the organisms in each population
             Fitness.AssignFitnesses(hostPopulation, allHostResults);
             Fitness.AssignFitnesses(parasitePopulation, allParasiteResults);
-
-            // TODO everything below here is basically pseudocode, but roughly what I want
 
             // Selection and breeding
             foreach (Population population in new List<Population>{hostPopulation, parasitePopulation}) {

@@ -76,8 +76,8 @@ public static class Fitness {
                 
                 // Competitive fitness sharing. The reward for defeating a parasite is 1/N * reward, where N is the
                 // number of unique hosts that can defeat this parasite, and reward is the reward assigned for the game result
-                int uniqueDefeats = parasiteDefeatCount[parasite].Count;
-                double rewardModifier = 1.0 / uniqueDefeats;
+                int uniqueDefeats = parasiteDefeatCount.TryGetValue(parasite, out var value) ? value.Count: 0;
+                double rewardModifier = uniqueDefeats > 0 ? 1.0 / uniqueDefeats: 1.0;
                 totalFitnessReward += rewardModifier * ConvertGameResultToFitness(gameResult);
             }
             // Explicit fitness sharing. The total fitness is divided by the number of organisms in the same species

@@ -63,6 +63,10 @@ public class Population {
         return challengers;
     }
 
+    public Organism GetSuperchamp() {
+        return Organisms.OrderByDescending(o => o.Fitness).First();
+    }
+
 
     public void SelectAndReproduce() {
         var newOrganisms = new List<Organism>();
@@ -90,7 +94,7 @@ public class Population {
         }
 
         // Find the "superchamp" ie the organism with the greatest fitness in the entire population
-        var superChamp = Organisms.OrderByDescending(o => o.Fitness).First();
+        var superChamp = GetSuperchamp();
 
         // create special clones from super champ with no structural changes, only weight changes
         for (int i = 0; i < Constants.SuperchampOffspring; i++) {

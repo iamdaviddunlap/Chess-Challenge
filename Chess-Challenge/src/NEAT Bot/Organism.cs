@@ -248,6 +248,8 @@ public class Genome {
                     foreach (var conn in Connections.Where(c => c.Nodes.Item2.ID == node.ID && c.IsEnabled)) {
                         node.Value += conn.Weight * conn.Nodes.Item1.Value;
                     }
+                    // Add the bias
+                    node.Value += node.Bias;
             
                     // Apply activation function (here using sigmoid)
                     if (node.Type != "input") {

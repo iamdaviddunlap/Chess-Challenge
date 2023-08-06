@@ -1,7 +1,7 @@
 ﻿namespace Chess_Challenge.NEAT_Bot; 
 
 public static class Constants {
-    public const int PopulationSize = 20;
+    public const int PopulationSize = 50;
     public const int InputsCount = 3;
     public const int OutputsCount = 1;
     public const double MinVal = -99.999;
@@ -36,4 +36,8 @@ public static class Constants {
     public const int MinAsexualOffspring = 3;
     public const double SpeciesElitePercentage = 0.2;
     public const double InheritDisableChance = 0.75;
+
+    public const double MateMultipointProb = 0.6;  // Ken Stanley used 0.6
+    public const double MateMultipointAvgProb = 0.2;  // Ken Stanley used 0.4
+    public const double MateSinglepointProb = 0.2; // Ken Stanley used 0, ie turned this off
 }

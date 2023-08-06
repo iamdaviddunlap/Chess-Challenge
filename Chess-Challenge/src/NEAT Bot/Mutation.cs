@@ -117,7 +117,8 @@ public static class Mutation {
             oldConnection.IsEnabled = false;
 
             // Create new node
-            var newNode = genome.AddNode("hidden", depth: oldConnection.Nodes.Item1.Depth+1, sourceConnection: oldConnection);
+            var bias = Math.Round(random.NextDouble() * 2 - 1, 3);
+            var newNode = genome.AddNode("hidden", depth: oldConnection.Nodes.Item1.Depth+1, sourceConnection: oldConnection, bias: bias);
         
             // Increment depth for old output if needed
             if (oldConnection.Nodes.Item1.Depth + 1 == oldConnection.Nodes.Item2.Depth) {

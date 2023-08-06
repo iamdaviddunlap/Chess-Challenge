@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 
 namespace Chess_Challenge.NEAT_Bot; 
@@ -22,7 +23,7 @@ public class Organism {
         OrganismId = _innovationHandler.GetNextOrganismId();
     }
     
-        public Organism Reproduce(Random random, Organism? coParent = null) {
+    public Organism Reproduce(Random random, Organism? coParent = null) {
         Genome offspringGenome;
         if (coParent == null) {  // Asexual reproduction
             offspringGenome = Genome.Clone();
@@ -30,62 +31,137 @@ public class Organism {
         }
         else // Sexual reproduction
         {
-            offspringGenome = new Genome(_innovationHandler, random, addConnections: false);
-            
-            // Handle nodes
-            foreach (var nodeId in Genome.Nodes.Where(n => n.Type == "hidden").Select(n => n.ID)
-                         .Union(coParent.Genome.Nodes.Where(n => n.Type == "hidden").Select(n => n.ID))) {
-                Genome.Node? parentNode1 = Genome.Nodes.FirstOrDefault(n => n.ID == nodeId);
-                Genome.Node? parentNode2 = coParent.Genome.Nodes.FirstOrDefault(n => n.ID == nodeId);
-
-                Genome.Node newNode;
-                if (parentNode1 != null && parentNode2 != null) { // Matching nodes
-                    newNode = random.NextDouble() < 0.5 ? parentNode1 : parentNode2;
-                } else { // Disjoint or excess nodes
-                    newNode = parentNode1 ?? parentNode2;
-                }
-
-                offspringGenome.AddNode(newNode.Type, newNode.Depth, nodeId: newNode.ID);
-            }
-
-            var genome1InnovationNumbers = Genome.Connections.Select(c => c.InnovationNumber).ToList();
-            var genome2InnovationNumbers = coParent.Genome.Connections.Select(c => c.InnovationNumber).ToList();
-
-            // Calculate the smaller max innovation number
-            int maxInnovationNumber = Math.Min(genome1InnovationNumbers.Max(), genome2InnovationNumbers.Max());
-
-            // Identify matching genes
-            var matchingConnections = Genome.Connections
-                .Where(c => genome2InnovationNumbers.Contains(c.InnovationNumber))
-                .ToList();
-            
-            // Determine the more fit parent for disjoint and excess genes
-            Organism moreFitParent = Fitness > coParent.Fitness ? this : coParent;
-
-            // Handle matching genes
-            foreach (var matchingConnection in matchingConnections) {
-                var connToUse = random.NextDouble() < 0.5 ? matchingConnection : coParent.Genome.Connections.First(c => c.InnovationNumber == matchingConnection.InnovationNumber);
-                var inNode = offspringGenome.GetNodeById(connToUse.Nodes.Item1.ID);
-                var outNode = offspringGenome.GetNodeById(connToUse.Nodes.Item2.ID);
-                var doEnable = connToUse.IsEnabled;
-                if (!doEnable && random.NextDouble() > Constants.InheritDisableChance) {
-                    // Chance to re-enable disabled connection
-                    doEnable = true;
-                }
-                offspringGenome.AddConnection(inNode, outNode, connToUse.Weight, doEnable);
-            }
-
-            // Handle disjoint and excess genes
-            foreach (var connection in Genome.Connections.Concat(coParent.Genome.Connections)) {
-                if (matchingConnections.All(c => c.InnovationNumber != connection.InnovationNumber) && moreFitParent.Genome.Connections.Contains(connection)) {
-                    var inNode = offspringGenome.GetNodeById(connection.Nodes.Item1.ID);
-                    var outNode = offspringGenome.GetNodeById(connection.Nodes.Item2.ID);
-                    offspringGenome.AddConnection(inNode, outNode, connection.Weight, connection.IsEnabled);
-                }
+            if(random.NextDouble() < Constants.MateMultipointProb) {
+                offspringGenome = MateMultipoint(random, coParent);
+            } else if(random.NextDouble() < Constants.MateMultipointAvgProb / (Constants.MateMultipointAvgProb + Constants.MateSinglepointProb)) {
+                offspringGenome = MateMultipointAvg(random, coParent);
+            } else {
+                offspringGenome = MateSinglepoint(random, coParent);
             }
         }
 
         return new Organism(offspringGenome, _innovationHandler);
+    }
+        
+    private Genome MateMultipoint(Random random, Organism coParent) {
+        var offspringGenome = new Genome(_innovationHandler, random, fillGenome: false);
+        
+        // Determine the more fit parent
+        Organism moreFitParent = Fitness > coParent.Fitness ? this : coParent;
+        bool thisIsMoreFit = moreFitParent == this;
+            
+        // Handle hidden nodes. Only take disjoint/excess nodes from the fitter parent
+        foreach (var nodeId in moreFitParent.Genome.Nodes.Select(n => n.ID)) {
+            Genome.Node? parentNode1 = (thisIsMoreFit ? this : coParent).Genome.Nodes.FirstOrDefault(n => n.ID == nodeId);
+            Genome.Node? parentNode2 = (thisIsMoreFit ? coParent : this).Genome.Nodes.FirstOrDefault(n => n.ID == nodeId);
+            
+            Genome.Node newNode;
+            if (parentNode1 != null && parentNode2 != null) { // Matching nodes
+                var bias = random.NextDouble() < 0.5 ? parentNode1.Bias : parentNode2.Bias;
+                newNode = new Genome.Node { ID = nodeId, Type = parentNode1.Type, Depth = parentNode1.Depth, Bias = bias};
+            } else { // Disjoint or excess node from fitter parent
+                newNode = parentNode1 ?? parentNode2;
+            }
+
+            offspringGenome.AddNode(newNode.Type, parentNode1.Depth, nodeId: newNode.ID, bias: newNode.Bias);
+        }
+        
+        var genome2InnovationNumbers = coParent.Genome.Connections.Select(c => c.InnovationNumber).ToList();
+
+        // Identify matching connections
+        var matchingConnections = Genome.Connections
+            .Where(c => genome2InnovationNumbers.Contains(c.InnovationNumber))
+            .ToList();
+
+        // Handle matching connections
+        foreach (var matchingConnection in matchingConnections) {
+            var coParentGene = coParent.Genome.Connections.First(c => c.InnovationNumber == matchingConnection.InnovationNumber);
+            var inNode = offspringGenome.GetNodeById(matchingConnection.Nodes.Item1.ID);
+            var outNode = offspringGenome.GetNodeById(matchingConnection.Nodes.Item2.ID);
+            var weightToUse = random.NextDouble() < 0.5 ? matchingConnection.Weight : coParentGene.Weight;
+            var connToUse = new Genome.Connection(inNode, outNode, innovationNumber: matchingConnection.InnovationNumber,
+                isEnabled: matchingConnection.IsEnabled && coParentGene.IsEnabled, weight: weightToUse);
+            var doEnable = connToUse.IsEnabled;
+            if (!doEnable && random.NextDouble() > Constants.InheritDisableChance) {
+                // Chance to re-enable disabled connection
+                doEnable = true;
+            }
+            offspringGenome.AddConnection(inNode, outNode, connToUse.Weight, doEnable);
+        }
+
+        // Add any disjoint/excess nodes from the fitter parent
+        foreach (var connection in moreFitParent.Genome.Connections) {
+            if (matchingConnections.All(c => c.InnovationNumber != connection.InnovationNumber)) {
+                var inNode = offspringGenome.GetNodeById(connection.Nodes.Item1.ID);
+                var outNode = offspringGenome.GetNodeById(connection.Nodes.Item2.ID);
+                offspringGenome.AddConnection(inNode, outNode, connection.Weight, connection.IsEnabled);
+            }
+        }
+
+        return offspringGenome;
+    }
+
+    private Genome MateMultipointAvg(Random random, Organism coParent) {
+        var offspringGenome = new Genome(_innovationHandler, random, fillGenome: false);
+        
+        // Determine the more fit parent
+        Organism moreFitParent = Fitness > coParent.Fitness ? this : coParent;
+        bool thisIsMoreFit = moreFitParent == this;
+            
+        // Handle hidden nodes. Only take disjoint/excess nodes from the fitter parent
+        foreach (var nodeId in moreFitParent.Genome.Nodes.Select(n => n.ID)) {
+            Genome.Node? parentNode1 = (thisIsMoreFit ? this : coParent).Genome.Nodes.FirstOrDefault(n => n.ID == nodeId);
+            Genome.Node? parentNode2 = (thisIsMoreFit ? coParent : this).Genome.Nodes.FirstOrDefault(n => n.ID == nodeId);
+            
+            Genome.Node newNode;
+            if (parentNode1 != null && parentNode2 != null) { // Matching nodes
+                var bias = Math.Round((parentNode1.Bias + parentNode2.Bias) / 2.0, 3);
+                newNode = new Genome.Node { ID = nodeId, Type = parentNode1.Type, Depth = parentNode1.Depth, Bias = bias};
+            } else { // Disjoint or excess node from fitter parent
+                newNode = parentNode1 ?? parentNode2;
+            }
+
+            offspringGenome.AddNode(newNode.Type, parentNode1.Depth, nodeId: newNode.ID, bias: newNode.Bias);
+        }
+        
+        var genome2InnovationNumbers = coParent.Genome.Connections.Select(c => c.InnovationNumber).ToList();
+
+        // Identify matching connections
+        var matchingConnections = Genome.Connections
+            .Where(c => genome2InnovationNumbers.Contains(c.InnovationNumber))
+            .ToList();
+
+        // Handle matching connections
+        foreach (var matchingConnection in matchingConnections) {
+            var coParentGene = coParent.Genome.Connections.First(c => c.InnovationNumber == matchingConnection.InnovationNumber);
+            var inNode = offspringGenome.GetNodeById(matchingConnection.Nodes.Item1.ID);
+            var outNode = offspringGenome.GetNodeById(matchingConnection.Nodes.Item2.ID);
+            var weightToUse = Math.Round((matchingConnection.Weight + coParentGene.Weight) / 2.0, 3);
+            var connToUse = new Genome.Connection(inNode, outNode, innovationNumber: matchingConnection.InnovationNumber,
+                isEnabled: matchingConnection.IsEnabled && coParentGene.IsEnabled, weight: weightToUse);
+            var doEnable = connToUse.IsEnabled;
+            if (!doEnable && random.NextDouble() > Constants.InheritDisableChance) {
+                // Chance to re-enable disabled connection
+                doEnable = true;
+            }
+            offspringGenome.AddConnection(inNode, outNode, connToUse.Weight, doEnable);
+        }
+
+        // Add any disjoint/excess nodes from the fitter parent
+        foreach (var connection in moreFitParent.Genome.Connections) {
+            if (matchingConnections.All(c => c.InnovationNumber != connection.InnovationNumber)) {
+                var inNode = offspringGenome.GetNodeById(connection.Nodes.Item1.ID);
+                var outNode = offspringGenome.GetNodeById(connection.Nodes.Item2.ID);
+                offspringGenome.AddConnection(inNode, outNode, connection.Weight, connection.IsEnabled);
+            }
+        }
+
+        return offspringGenome;
+    }
+
+    private Genome MateSinglepoint(Random random, Organism coParent) {
+        // Implement singlepoint mating logic here
+        return new Genome(_innovationHandler, random);  // TODO remove this after implementing
     }
     
     public override string ToString() {
@@ -100,23 +176,23 @@ public class Genome {
         private readonly InnovationHandler _innovationHandler;
         private Random Random;
 
-        public Genome(InnovationHandler innovationHandler, Random random, bool addConnections = true) {
+        public Genome(InnovationHandler innovationHandler, Random random, bool fillGenome = true) {
             _innovationHandler = innovationHandler;
             this.Random = random;
             Connections = new List<Connection>();
             Nodes = new List<Node>();
+            if (!fillGenome) return;
             for (var i = 0; i < Constants.InputsCount; i++) {
-                AddNode("input", depth: 0);
+                AddNode("input", depth: 0, bias: 1.0);
             }
             for (var i = 0; i < Constants.OutputsCount; i++) {
-                AddNode("output", depth: 1);
-                if (addConnections) {
-                    for (var j = 0; j < Nodes.Count - (i + 1); j++) {
-                        var curIn = Nodes[j];
-                        var curOut = Nodes[^1];
-                        var weight = Math.Round(random.NextDouble() * 2 - 1, 3);
-                        AddConnection(curIn, curOut, weight, true);
-                    }
+                var bias = Math.Round(random.NextDouble() * 2 - 1, 3);
+                AddNode("output", depth: 1, bias: bias);
+                for (var j = 0; j < Nodes.Count - (i + 1); j++) {
+                    var curIn = Nodes[j];
+                    var curOut = Nodes[^1];
+                    var weight = Math.Round(random.NextDouble() * 2 - 1, 3);
+                    AddConnection(curIn, curOut, weight, true);
                 }
             }
         }
@@ -126,11 +202,11 @@ public class Genome {
         }
         
         public Genome Clone() {
-            Genome clonedGenome = new Genome(_innovationHandler, Random);
+            Genome clonedGenome = new Genome(_innovationHandler, Random, fillGenome: false);
         
             // Cloning Nodes
             foreach (var node in Nodes) {
-                clonedGenome.AddNode(node.Type, node.Depth);
+                clonedGenome.AddNode(node.Type, node.Depth, node.Bias, nodeId: node.ID);
             }
         
             // Cloning Connections
@@ -188,7 +264,7 @@ public class Genome {
             return conn;
         }
         
-        public Node AddNode(string type, int depth, int nodeId = -1, Connection? sourceConnection = null) {
+        public Node AddNode(string type, int depth, double bias, int nodeId = -1, Connection? sourceConnection = null) {
             if(nodeId == -1) {
                 if (sourceConnection == null) {
                     nodeId = Nodes.Count;
@@ -198,12 +274,13 @@ public class Genome {
                         new Tuple<int, int>(sourceConnection.Nodes.Item1.ID, sourceConnection.Nodes.Item2.ID));
                 }
             }
-            var node = new Node { ID = nodeId, Type = type, Depth = depth};
+            var node = new Node { ID = nodeId, Type = type, Depth = depth, Bias = bias};
             Nodes.Add(node);
             return node;
         }
 
         public double[] Activate(double[] inputs, int timestepsPerActivation = 1) {
+            // TODO use bias
             if (inputs.Length != Nodes.Count(n => n.Type == "input")) {
                 throw new ArgumentException("Input length must be equal to the number of input nodes");
             }
@@ -252,8 +329,10 @@ public class Genome {
             public double Value { get; set; }
             public int Depth { get; set; }
             
+            public double Bias { get; set; }
+
             public override string ToString() {
-                return $"[{Type} {ID}]";
+                return $"[{Type} {ID} {{{Bias}}}]";
             }
         }
 

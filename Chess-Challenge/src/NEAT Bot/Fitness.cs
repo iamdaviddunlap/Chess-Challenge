@@ -24,7 +24,6 @@ public static class Fitness {
         var results = new Dictionary<Tuple<Organism, Organism, bool>, int>();
 
         // Main loop over games for each challenger. The host plays each challenger twice - once as white and once as black
-        // TODO parallelize this loop! It will likely take a very long time as-is
         foreach (var challenger in challengers) 
         {
             for (int i = 0; i < 2; i++) 
@@ -66,9 +65,25 @@ public static class Fitness {
                 parasiteDefeatCount[parasite].Add(host);
             }
         }
+        
+        // Organism maxGenomeOrganism = hostPopulation.Organisms.Aggregate((o1, o2) => 
+        //     (o1.Genome.Nodes.Count + o1.Genome.Connections.Count) > (o2.Genome.Nodes.Count + o2.Genome.Connections.Count) ? o1 : o2);
+        double maxNodesCount = hostPopulation.Organisms.Max(o => o.Genome.Nodes.Count);
+        double maxConnCount = hostPopulation.Organisms.Max(o => o.Genome.Connections.Count);
+        
 
         // Calculate fitness for each organism
         foreach (var organism in hostPopulation.Organisms) {
+            // Calculate penalty for genome size
+            
+            // Calculate penalties using a the singular biggest organism in the population instead of nodes and connections separately
+            // double nodesCountPenalty = Constants.FitnessPenaltyFactorNodeCount * (organism.Genome.Nodes.Count / (double)maxGenomeOrganism.Genome.Nodes.Count);
+            // double connCountPenalty = Constants.FitnessPenaltyFactorConnCount * (organism.Genome.Connections.Count / (double)maxGenomeOrganism.Genome.Connections.Count);
+            
+            double nodesCountPenalty = Constants.FitnessPenaltyFactorNodeCount * (organism.Genome.Nodes.Count / maxNodesCount);
+            double connCountPenalty = Constants.FitnessPenaltyFactorConnCount * (organism.Genome.Connections.Count / maxConnCount);
+            double totalPenalty = (nodesCountPenalty + connCountPenalty) / 2;
+            
             var totalFitnessReward = 0.0;
             foreach (var result in hostGameResults.Where(r => r.Key.Item1 == organism)) {
                 var parasite = result.Key.Item2;
@@ -77,12 +92,12 @@ public static class Fitness {
                 // Competitive fitness sharing. The reward for defeating a parasite is 1/N * reward, where N is the
                 // number of unique hosts that can defeat this parasite, and reward is the reward assigned for the game result
                 int uniqueDefeats = parasiteDefeatCount.TryGetValue(parasite, out var value) ? value.Count: 0;
-                double rewardModifier = uniqueDefeats > 0 ? 1.0 / uniqueDefeats: 1.0;
+                double rewardModifier = uniqueDefeats > 0 ? 1.0 / uniqueDefeats: 2.0;
                 totalFitnessReward += rewardModifier * ConvertGameResultToFitness(gameResult);
             }
             // Explicit fitness sharing. The total fitness is divided by the number of organisms in the same species
             int speciesCount = hostPopulation.Organisms.Count(o => o.SpeciesId == organism.SpeciesId);
-            organism.Fitness = totalFitnessReward / speciesCount;
+            organism.Fitness = (totalFitnessReward / speciesCount) - totalPenalty;
         }
     }
 }

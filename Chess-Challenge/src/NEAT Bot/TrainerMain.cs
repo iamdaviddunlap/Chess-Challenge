@@ -64,14 +64,18 @@ public abstract class Trainer {
             // Get some metrics about how things are going
             Organism hostChamp = hostPopulation.GetSuperchamp();
             Organism parasiteChamp = parasitePopulation.GetSuperchamp();
-            var hostLoss = GameController.XORSinglePlayer(hostChamp, random);
-            var parasiteLoss = GameController.XORSinglePlayer(parasiteChamp, random);
+            var dataset = DatasetHolder.GaussianClassificationDataset();
+            var hostLoss = GameController.PlayLabeledDatasetSinglePlayer(hostChamp, random, dataset);
+            var parasiteLoss = GameController.PlayLabeledDatasetSinglePlayer(parasiteChamp, random, dataset);
             
             var overallChamp = hostLoss < parasiteLoss ? hostChamp : parasiteChamp;
+            var overallChampGuessBasedOnFitness = hostChamp.Fitness > parasiteChamp.Fitness ? hostChamp : parasiteChamp;
+            var fitterChampStr = overallChampGuessBasedOnFitness == hostChamp ? "host" : "parasite";
             hallOfFame.Add(overallChamp);
             
             Console.WriteLine($"Generation {generation}: host champion loss: {hostLoss}");
             Console.WriteLine($"Generation {generation}: parasite champion loss: {parasiteLoss}");
+            Console.WriteLine($"The {fitterChampStr} is fitter");
             Console.WriteLine("----------------------------");
 
             // Selection and breeding

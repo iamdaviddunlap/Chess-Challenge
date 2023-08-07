@@ -36,8 +36,10 @@ public static class Constants {
     public const int SpeciesCountTarget = 10;  // I haven't tuned this
 
     public const double FitnessRewardWin = 2.0;
-    public const double FitnessRewardDraw = 1.0;
+    public const double FitnessRewardDraw = -1.0;
     public const double FitnessRewardLoss = 0.0;
+    public const double FitnessPenaltyFactorConnCount = 0.05;
+    public const double FitnessPenaltyFactorNodeCount = 0.0;
     
     public const int SuperchampOffspring = 3;
     public const double MutateOnlyProb = 0.25;

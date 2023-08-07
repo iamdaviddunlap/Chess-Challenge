@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Chess_Challenge.NEAT_Bot; 
 
@@ -19,7 +21,42 @@ public static class Fitness {
     /// parasite population and the Hall of Fame. 2 games will be played against each challenger, one as white and one
     /// as black. The fitness of the host will NOT be affected by this function. It will simply find the result of its
     /// games against the challengers.
-    public static Dictionary<Tuple<Organism, Organism, bool>, int> EvaluateFitness(Organism host, List<Organism> challengers,
+    public static async Task<Dictionary<Tuple<Organism, Organism, bool>, int>> EvaluateFitnessAsync(Organism host, List<Organism> challengers,
+        Random random, Dictionary<Tuple<Organism, Organism, bool>, int>? precalcResults = null) {
+        var results = new Dictionary<Tuple<Organism, Organism, bool>, int>();
+        var tasks = new List<Task>();
+        var threadLocalRandom = new ThreadLocal<Random>(() => new Random(random.Next()));
+
+        // Main loop over games for each challenger. The host plays each challenger twice - once as white and once as black
+        foreach (var challenger in challengers) {
+            for (int i = 0; i < 2; i++) {
+                bool hostIsWhite = i == 0;
+                var key = new Tuple<Organism, Organism, bool>(host, challenger, hostIsWhite);
+                tasks.Add(Task.Run(() =>
+                {
+                    int result;
+                    if (precalcResults != null && precalcResults.TryGetValue(key, out var precalcResult)) {
+                        // Use the precalculated result if it exists in the precalcResults dictionary
+                        result = precalcResult;
+                    }
+                    else {
+                        // Run the PlayGame method if no precalculated result is found
+                        result = GameController.PlayGame(host, challenger, hostIsWhite, threadLocalRandom.Value);
+                    }
+
+                    lock (results) {
+                        results[key] = result;
+                    }
+                }));
+            }
+        }
+
+        await Task.WhenAll(tasks);
+
+        return results;
+    }
+    
+    public static Dictionary<Tuple<Organism, Organism, bool>, int> EvaluateFitnessSync(Organism host, List<Organism> challengers,
         Random random, Dictionary<Tuple<Organism, Organism, bool>, int>? precalcResults = null) {
         var results = new Dictionary<Tuple<Organism, Organism, bool>, int>();
 
@@ -50,7 +87,8 @@ public static class Fitness {
         return results;
     }
 
-    public static void AssignFitnesses(Population hostPopulation, Dictionary<Tuple<Organism, Organism, bool>, int> hostGameResults) {
+
+    public static void AssignFitnesses(Population hostPopulation, Dictionary<Tuple<Organism, Organism, bool>, int> hostGameResults, bool penalizeSize = false) {
         
         // Find the number of unique hosts that defeat each parasite
         Dictionary<Organism, HashSet<Organism>> parasiteDefeatCount = new Dictionary<Organism, HashSet<Organism>>();
@@ -69,7 +107,8 @@ public static class Fitness {
         // Organism maxGenomeOrganism = hostPopulation.Organisms.Aggregate((o1, o2) => 
         //     (o1.Genome.Nodes.Count + o1.Genome.Connections.Count) > (o2.Genome.Nodes.Count + o2.Genome.Connections.Count) ? o1 : o2);
         double maxNodesCount = hostPopulation.Organisms.Max(o => o.Genome.Nodes.Count);
-        double maxConnCount = hostPopulation.Organisms.Max(o => o.Genome.Connections.Count);
+        // double maxConnCount = hostPopulation.Organisms.Max(o => o.Genome.Connections.Count);
+        double worstRatio = hostPopulation.Organisms.Max(o => o.Genome.Connections.Count / Math.Pow(o.Genome.Nodes.Count, 2));
         
 
         // Calculate fitness for each organism
@@ -79,10 +118,16 @@ public static class Fitness {
             // Calculate penalties using a the singular biggest organism in the population instead of nodes and connections separately
             // double nodesCountPenalty = Constants.FitnessPenaltyFactorNodeCount * (organism.Genome.Nodes.Count / (double)maxGenomeOrganism.Genome.Nodes.Count);
             // double connCountPenalty = Constants.FitnessPenaltyFactorConnCount * (organism.Genome.Connections.Count / (double)maxGenomeOrganism.Genome.Connections.Count);
-            
-            double nodesCountPenalty = Constants.FitnessPenaltyFactorNodeCount * (organism.Genome.Nodes.Count / maxNodesCount);
-            double connCountPenalty = Constants.FitnessPenaltyFactorConnCount * (organism.Genome.Connections.Count / maxConnCount);
-            double totalPenalty = (nodesCountPenalty + connCountPenalty) / 2;
+
+            double totalPenalty;
+            if (penalizeSize) {
+                var nodesRatio = organism.Genome.Nodes.Count / maxNodesCount;
+                var connsRatio = (organism.Genome.Connections.Count / Math.Pow(organism.Genome.Nodes.Count, 2)) / worstRatio;
+                totalPenalty = ((nodesRatio + connsRatio) / 2.0) * Constants.FitnessPenaltyFactor;
+            }
+            else {
+                totalPenalty = 0;
+            }
             
             var totalFitnessReward = 0.0;
             foreach (var result in hostGameResults.Where(r => r.Key.Item1 == organism)) {

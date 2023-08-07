@@ -56,7 +56,8 @@ public static class GameController {
     private static int PlaySupervisedLearning(Organism hostPlayer, Organism parasitePlayer, Random random) {
         
         // var dataset = DatasetHolder.XORDataset();
-        var dataset = DatasetHolder.GaussianClassificationDataset();
+        // var dataset = DatasetHolder.GaussianClassificationDataset();
+        var dataset = DatasetHolder.CirclesClassificationDataset();
         
         double hostLoss = PlayLabeledDatasetSinglePlayer(hostPlayer, random, dataset);
         double parasiteLoss = PlayLabeledDatasetSinglePlayer(parasitePlayer, random, dataset);

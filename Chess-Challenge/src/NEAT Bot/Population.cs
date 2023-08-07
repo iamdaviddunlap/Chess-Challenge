@@ -66,9 +66,18 @@ public class Population {
     public Organism GetSuperchamp() {
         return Organisms.OrderByDescending(o => o.Fitness).First();
     }
+    
+    public List<Organism> GetNSpeciesChamps(int numChamps) {
+        return Organisms
+            .GroupBy(o => o.SpeciesId)
+            .Select(g => g.OrderByDescending(o => o.Fitness).First())
+            .OrderByDescending(o => o.Fitness)
+            .Take(numChamps)
+            .ToList();
+    }
 
 
-    public void SelectAndReproduce() {
+    public void SelectAndReproduce(List<Organism> otherPopulationSeeds) {
         var newOrganisms = new List<Organism>();
         
         // Dictionary to hold average fitness per species
@@ -128,19 +137,25 @@ public class Population {
                         do {  // Select a random species that is not the current one
                             otherSpeciesId = SpeciesIds[Random.Next(SpeciesIds.Count)];
                         } while (otherSpeciesId == speciesId);
-                        // Select the champion from the other species
+                        // Select the champion from the other species to mate with
                         var champOrganism = speciesChamps.First(o => o.SpeciesId == otherSpeciesId);
                         
                         var index = Random.Next(speciesOrganisms.Count);
                         offspring = speciesOrganisms[index].Reproduce(Random, champOrganism);
-                    } else {
+                    } else if (Random.NextDouble() < Constants.CrossPopulationMatingProb) {
+                        // Select an organism from the other population to mate with
+                        var otherPopOrganism = otherPopulationSeeds[Random.Next(otherPopulationSeeds.Count)];
+                        var index = Random.Next(speciesOrganisms.Count);
+                        offspring = speciesOrganisms[index].Reproduce(Random, otherPopOrganism);
+                    }
+                    else {
+                        // Find random co-parent from this species to mate with
                         var index1 = -1;
                         var index2 = -1;
                         while (index1 == index2) {
                             index1 = Random.Next(speciesOrganisms.Count);
                             index2 = Random.Next(speciesOrganisms.Count);
                         }
-
                         offspring = speciesOrganisms[index1].Reproduce(Random, speciesOrganisms[index2]);
                     }
                     // Decide whether or not to mutate baby

@@ -14,6 +14,7 @@ public static class Mutation {
             AddConnectionMutation(genome, random);
         } else {
             // Do any number of other non-structural mutations
+            List<Genome.Connection> removableConnections = null;
             if (random.NextDouble() < Constants.MutateWeightsProb) {
                 MutateWeights(genome, random);
             }
@@ -21,13 +22,15 @@ public static class Mutation {
                 MutateBiases(genome, random);
             }
             if (random.NextDouble() < Constants.MutateToggleEnableProb) {
-                MutateToggleEnable(genome, random);
+                removableConnections ??= FindConsForRemoval(genome, random);
+                MutateToggleEnable(genome, removableConnections, random);
             }
             if (random.NextDouble() < Constants.MutateReenableProb) {
                 MutateGeneReenable(genome, random);
             }
             if (random.NextDouble() < Constants.MutateRemoveConnectionProb) {
-                MutateRemoveConnection(genome, random);
+                removableConnections ??= FindConsForRemoval(genome, random);
+                MutateRemoveConnection(genome, removableConnections, random);
             }
         }
     }
@@ -84,9 +87,15 @@ public static class Mutation {
         }
     }
 
-    public static void MutateToggleEnable(Genome genome, Random random) {
-        // Pick a random connection
-        var connection = genome.Connections[random.Next(genome.Connections.Count)];
+    public static void MutateToggleEnable(Genome genome,  List<Genome.Connection> eligibleConnections, Random random) {
+        
+        // Add currently disabled connections to eligible ones for toggling enable
+        eligibleConnections.AddRange(genome.Connections.FindAll(c => !c.IsEnabled));
+        
+        // If there are any eligible connections
+        if (eligibleConnections.Count <= 0) return;
+        // Pick one at random and remove it
+        var connection = eligibleConnections[random.Next(eligibleConnections.Count)];
     
         // Toggle the IsEnabled attribute
         connection.IsEnabled = !connection.IsEnabled;
@@ -104,7 +113,16 @@ public static class Mutation {
         }
     }
     
-    public static void MutateRemoveConnection(Genome genome, Random random) {
+    public static void MutateRemoveConnection(Genome genome, List<Genome.Connection> eligibleConnections, Random random) {
+
+        // If there are any eligible connections
+        if (eligibleConnections.Count <= 0) return;
+        // Pick one at random and remove it
+        var connectionToRemove = eligibleConnections[random.Next(eligibleConnections.Count)];
+        genome.Connections.Remove(connectionToRemove);
+    }
+
+    private static List<Genome.Connection> FindConsForRemoval(Genome genome, Random random) {
         // Create dictionaries to count how many times each node appears as a source and a target
         Dictionary<Genome.Node, int> sourceCount = new Dictionary<Genome.Node, int>();
         Dictionary<Genome.Node, int> targetCount = new Dictionary<Genome.Node, int>();
@@ -129,13 +147,8 @@ public static class Mutation {
         // Filter out the connections where both the source and the target appear more than once
         var eligibleConnections = genome.Connections.Where(conn => 
             sourceCount[conn.Nodes.Item1] > 1 && targetCount[conn.Nodes.Item2] > 1).ToList();
-
-        // If there are any eligible connections
-        if (eligibleConnections.Count > 0) {
-            // Pick one at random and remove it
-            var connectionToRemove = eligibleConnections[random.Next(eligibleConnections.Count)];
-            genome.Connections.Remove(connectionToRemove);
-        }
+        
+        return eligibleConnections;
     }
     
     private static bool AddConnectionMutation(Genome genome, Random random) {

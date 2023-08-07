@@ -2,7 +2,7 @@
 
 public static class Constants {
     public const int PopulationSize = 200;
-    public const int InputsCount = 1;
+    public const int InputsCount = 2;
     public const int OutputsCount = 2;
     public const double MinVal = -99.999;
     public const double MaxVal = 99.999;
@@ -19,10 +19,10 @@ public static class Constants {
     public const double MutateReenableProb = 0.05;  // Ken Stanley set this to 0.05
     public const double MutateRemoveConnectionProb = 0.1;  // I made this up
     public const double AddConnectionProb = 0.3;
-    public const double AddNodeProb = 0.1;  // Ken Stanley set this to 0.05
+    public const double AddNodeProb = 0.2;  // Ken Stanley set this to 0.05
     // public const double AddNodeProb = 0.3;
     public const double WeightPerturbChance = 0.6;  // Ken Stanley set this to 0.9
-    public const double WeightPerturbValue = 1.0;  // Ken Stanley set this to 2.5
+    public const double WeightPerturbValue = 2.5;  // Ken Stanley set this to 2.5
     public const double BiasPerturbChance = WeightPerturbChance;
     public const double BiasPerturbValue = WeightPerturbValue;
 
@@ -38,13 +38,15 @@ public static class Constants {
     public const double FitnessRewardWin = 2.0;
     public const double FitnessRewardDraw = -1.0;
     public const double FitnessRewardLoss = 0.0;
-    public const double FitnessPenaltyFactorConnCount = 0.05;
-    public const double FitnessPenaltyFactorNodeCount = 0.0;
+    public const double FitnessPenaltyFactorConnCount = 0.7;
+    public const double FitnessPenaltyFactorNodeCount = 0.3;
+    public const double FitnessPenaltyFactor = 0.005;
     
     public const int SuperchampOffspring = 3;
     public const double MutateOnlyProb = 0.25;
     public const double MateOnlyProb = 0.2;
     public const double CrossSpeciesMatingProb = 0.05;
+    public const double CrossPopulationMatingProb = 0.001;
     public const double SpeciesElitePercentage = 0.2;  // What % of each species to keep and allow to reproduce
     public const double InheritDisableChance = 0.75;
 

@@ -29,7 +29,8 @@ public abstract class Trainer {
             
             // Evaluate raw fitness for hosts. Also save any results for organisms that are challengers for the parasites
             foreach (Organism host in hostPopulation.Organisms) {
-                var curHostGameWinners = Fitness.EvaluateFitness(host, challengersForHosts, random);
+                // var curHostGameWinners = Fitness.EvaluateFitnessAsync(host, challengersForHosts, random).GetAwaiter().GetResult();
+                var curHostGameWinners = Fitness.EvaluateFitnessSync(host, challengersForHosts, random);
 
                 if(challengersForParasites.Contains(host)) {
                     foreach(var (originalKey, value) in curHostGameWinners) {
@@ -51,20 +52,24 @@ public abstract class Trainer {
             
             // Evaluate raw fitness of parasites
             foreach (Organism parasite in parasitePopulation.Organisms) {
-                var curParasiteGameWinners = Fitness.EvaluateFitness(parasite, challengersForParasites, random, parasitePrecalcResults);
+                // var curParasiteGameWinners = Fitness.EvaluateFitnessAsync(parasite, challengersForParasites, random, parasitePrecalcResults).GetAwaiter().GetResult();
+                var curParasiteGameWinners = Fitness.EvaluateFitnessSync(parasite, challengersForParasites, random, parasitePrecalcResults);
                 foreach(var entry in curParasiteGameWinners) {
                     allParasiteResults[entry.Key] = entry.Value;
                 }
             }
             
             // Calculate fitnesses for the organisms in each population
-            Fitness.AssignFitnesses(hostPopulation, allHostResults);
-            Fitness.AssignFitnesses(parasitePopulation, allParasiteResults);
+            // var penalizeSize = generation % 10 == 0;
+            // var penalizeSize = generation > 25;
+            var penalizeSize = true;
+            Fitness.AssignFitnesses(hostPopulation, allHostResults, penalizeSize);
+            Fitness.AssignFitnesses(parasitePopulation, allParasiteResults, penalizeSize);
             
             // Get some metrics about how things are going
             Organism hostChamp = hostPopulation.GetSuperchamp();
             Organism parasiteChamp = parasitePopulation.GetSuperchamp();
-            var dataset = DatasetHolder.GaussianClassificationDataset();
+            var dataset = DatasetHolder.CirclesClassificationDataset();
             var hostLoss = GameController.PlayLabeledDatasetSinglePlayer(hostChamp, random, dataset);
             var parasiteLoss = GameController.PlayLabeledDatasetSinglePlayer(parasiteChamp, random, dataset);
             
@@ -78,10 +83,16 @@ public abstract class Trainer {
             Console.WriteLine($"The {fitterChampStr} is fitter");
             Console.WriteLine("----------------------------");
 
+            if (generation == 999) {
+                var x = 1;
+            }
+
             // Selection and breeding
             
             foreach (Population population in new List<Population>{hostPopulation, parasitePopulation}) {
-                population.SelectAndReproduce();
+                var otherPopulation = hostPopulation == population ? parasitePopulation : hostPopulation;
+                var populationSeeds = otherPopulation.GetNSpeciesChamps(3);
+                population.SelectAndReproduce(populationSeeds);
             }
             
             // Form species in both populations

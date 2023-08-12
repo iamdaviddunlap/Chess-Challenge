@@ -46,13 +46,25 @@ class Genome:
         self.determine_activation_order()
         self.node_pheno_to_geno = {pheno: geno for pheno, geno in enumerate(self.activation_order)}
         self.node_geno_to_pheno = {v: k for k, v in self.node_pheno_to_geno.items()}
-        # Create connection matrix
-        self.connection_matrix = torch.zeros((len(self.nodes), len(self.nodes)))
+
+        # Create connection matrix with 3 dimensions
+        self.connection_matrix = torch.zeros((len(self.nodes), len(self.nodes), 2))
+        self.connection_matrix[:, :, 1] = float('nan')
+
         for connection in self.connections:
             input_node_id = connection.input_node.node_id
             output_node_id = connection.output_node.node_id
             weight = connection.weight
-            self.connection_matrix[self.node_geno_to_pheno[input_node_id], self.node_geno_to_pheno[output_node_id]] = weight
+
+            # Assign the weight to the connection (using the 0th index in the third dimension)
+            self.connection_matrix[
+                self.node_geno_to_pheno[input_node_id], self.node_geno_to_pheno[output_node_id], 0] = weight
+
+            if connection.gater_node:
+                # Assign the gate to the connection (using the 1st index in the third dimension)
+                self.connection_matrix[
+                    self.node_geno_to_pheno[input_node_id], self.node_geno_to_pheno[output_node_id], 1] = \
+                    self.node_geno_to_pheno[connection.gater_node.node_id]
 
         # Initialize activations
         self.activations = torch.zeros(len(self.nodes))
@@ -108,14 +120,14 @@ class Genome:
         # Iterate Through Time Steps
         for _ in range(max_iterations):
             new_activations = self.activations.clone()
-            # Iterate through activation order
             for node_id in self.activation_order:
-                # Get the corresponding phenotype ID
                 phen_id = self.node_geno_to_pheno[node_id]
-                # Get node object
                 node = self.nodes[phen_id]
-                # Calculate new activation based on connection weights and activations
-                new_activation = new_activations[phen_id] + torch.sum(self.connection_matrix[:, phen_id] * new_activations) + node.bias
+                gates_mask = ~torch.isnan(self.connection_matrix[:, phen_id, 1])
+                incoming_activations = self.connection_matrix[:, phen_id, 0] * new_activations
+                incoming_activations[gates_mask] += new_activations[self.connection_matrix[:, phen_id, 1][gates_mask].numpy()]
+                incoming_activation = torch.sum(incoming_activations)
+                new_activation = new_activations[phen_id] + incoming_activation + node.bias
                 # Apply activation function
                 new_activations[phen_id] = node.activation_function(new_activation)
 
@@ -147,7 +159,7 @@ def main():
 
     # Create Connections
     nodes = genome.nodes
-    genome.add_connection(5.594, nodes[0], None, nodes[3])
+    genome.add_connection(5.594, nodes[0], nodes[2], nodes[3])  # Example of using a gater node
     genome.add_connection(-4.893, nodes[1], None, nodes[3])
     genome.add_connection(0.079, nodes[2], None, nodes[0])
     genome.add_connection(-2.472, nodes[3], None, nodes[2])
@@ -156,7 +168,6 @@ def main():
     genome.add_connection(8.205, nodes[4], None, nodes[3])
     genome.add_connection(-2.4, nodes[2], None, nodes[4])
     genome.add_connection(0.558, nodes[4], None, nodes[4])
-
 
     # Create Phenotype
     genome.create_phenotype()

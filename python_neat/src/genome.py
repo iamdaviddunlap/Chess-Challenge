@@ -109,13 +109,20 @@ class Genome:
         self.activation_order = activation_order
 
     def activate(self, input_activations, max_iterations=10, simulate_only=False):
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        # Move tensors to the GPU
+        self.activations = self.activations.to(device)
+        self.connection_matrix = self.connection_matrix.to(device)
+        input_activations_tensor = torch.tensor(input_activations).to(device)
+        old_activations = self.activations.clone()
+
         # Update activations for input nodes
         inputs_pheno_ids = [self.node_geno_to_pheno[node.node_id] for node in self.nodes if node.node_type == 'input']
         if len(input_activations) != len(inputs_pheno_ids):
             raise Exception(f'Inputs of length {len(input_activations)} don\'t match network with input size '
                             f'{len(inputs_pheno_ids)}')
-        old_activations = self.activations.clone()
-        self.activations[inputs_pheno_ids] = torch.tensor(input_activations)
+        self.activations[inputs_pheno_ids] = input_activations_tensor
 
         # Iterate Through Time Steps
         for _ in range(max_iterations):
@@ -125,7 +132,8 @@ class Genome:
                 node = self.nodes[phen_id]
                 gates_mask = ~torch.isnan(self.connection_matrix[:, phen_id, 1])
                 incoming_activations = self.connection_matrix[:, phen_id, 0] * new_activations
-                incoming_activations[gates_mask] *= new_activations[self.connection_matrix[:, phen_id, 1][gates_mask].numpy()]
+                incoming_activations[gates_mask] *= new_activations[
+                    self.connection_matrix[:, phen_id, 1][gates_mask].long()]
                 incoming_activation = torch.sum(incoming_activations)
                 new_activation = new_activations[phen_id] + incoming_activation + node.bias
                 # Apply activation function
@@ -151,9 +159,9 @@ def main():
     genome = Genome()
 
     # Create Nodes
-    genome.add_node('input', lambda x: x, 0)
-    genome.add_node('input', lambda x: x, 0)
-    genome.add_node('input', lambda x: x, 0)
+    genome.add_node('input', lambda x: x, 0.0)
+    genome.add_node('input', lambda x: x, 0.0)
+    genome.add_node('input', lambda x: x, 0.0)
     genome.add_node('output', F.sigmoid, 10.679)
     genome.add_node('hidden', F.sigmoid, -1.328)
 

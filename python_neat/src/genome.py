@@ -125,7 +125,7 @@ class Genome:
                 node = self.nodes[phen_id]
                 gates_mask = ~torch.isnan(self.connection_matrix[:, phen_id, 1])
                 incoming_activations = self.connection_matrix[:, phen_id, 0] * new_activations
-                incoming_activations[gates_mask] += new_activations[self.connection_matrix[:, phen_id, 1][gates_mask].numpy()]
+                incoming_activations[gates_mask] *= new_activations[self.connection_matrix[:, phen_id, 1][gates_mask].numpy()]
                 incoming_activation = torch.sum(incoming_activations)
                 new_activation = new_activations[phen_id] + incoming_activation + node.bias
                 # Apply activation function

@@ -1,11 +1,16 @@
 import torch
 import torch.nn.functional as F
 import networkx as nx
+import random
 from enum import Enum
 
 from innovation_handler import InnovationHandler
 from visualize import visualize_genome
 from json_converter import genome_to_json
+from mutation_handler import Mutation
+from constants import Constants
+
+random.seed(Constants.random_seed)
 
 
 class NodeType(Enum):
@@ -22,7 +27,7 @@ class Node:
         self.bias = bias
 
     def __str__(self):
-        return f"[{self.node_type} {self.node_id} {{{self.bias}}}]"
+        return f"[{self.node_type.value} {self.node_id} {{{self.bias}}}]"
 
 
 class Connection:
@@ -32,14 +37,34 @@ class Connection:
         self.input_node = input_node
         self.gater_node = gater_node
         self.output_node = output_node
+        self.is_enabled = True
 
 
 class Genome:
-    def __init__(self):
+    def __init__(self, innovation_handler=None, fill_genome=True):
         self.nodes = []
         self.connections = []
         self.activations = torch.zeros(len(self.nodes))
-        self.innovation_handler = InnovationHandler()
+        self.innovation_handler = InnovationHandler() if innovation_handler is None else innovation_handler
+
+        if not fill_genome:
+            return
+
+        # Adding Input Nodes
+        for _ in range(Constants.inputs_count):
+            self.add_node(NodeType.INPUT, lambda x: x, 0.0)
+
+        # Adding Output Nodes and Connections
+        for i in range(Constants.outputs_count):
+            bias = round(random.random() * 2 - 1, 3)
+            self.add_node(NodeType.OUTPUT, lambda x: x, bias)
+            for j in range(len(self.nodes) - (i + 1)):
+                cur_in = self.nodes[j]
+                cur_out = self.nodes[-1]
+                weight = round(random.random() * 2 - 1, 3)
+                self.add_connection(weight, cur_in, None, cur_out)
+
+        self.create_phenotype()
 
     def add_node(self, node_type, activation_function, bias, source_con=None, node_id=None):
         if node_id is None:
@@ -62,19 +87,20 @@ class Genome:
         self.connection_matrix[:, :, 1] = float('nan')
 
         for connection in self.connections:
-            input_node_id = connection.input_node.node_id
-            output_node_id = connection.output_node.node_id
-            weight = connection.weight
+            if connection.is_enabled:
+                input_node_id = connection.input_node.node_id
+                output_node_id = connection.output_node.node_id
+                weight = connection.weight
 
-            # Assign the weight to the connection (using the 0th index in the third dimension)
-            self.connection_matrix[
-                self.node_geno_to_pheno[input_node_id], self.node_geno_to_pheno[output_node_id], 0] = weight
-
-            if connection.gater_node:
-                # Assign the gate to the connection (using the 1st index in the third dimension)
+                # Assign the weight to the connection (using the 0th index in the third dimension)
                 self.connection_matrix[
-                    self.node_geno_to_pheno[input_node_id], self.node_geno_to_pheno[output_node_id], 1] = \
-                    self.node_geno_to_pheno[connection.gater_node.node_id]
+                    self.node_geno_to_pheno[input_node_id], self.node_geno_to_pheno[output_node_id], 0] = weight
+
+                if connection.gater_node:
+                    # Assign the gate to the connection (using the 1st index in the third dimension)
+                    self.connection_matrix[
+                        self.node_geno_to_pheno[input_node_id], self.node_geno_to_pheno[output_node_id], 1] = \
+                        self.node_geno_to_pheno[connection.gater_node.node_id]
 
         # Initialize activations
         self.activations = torch.zeros(len(self.nodes))
@@ -166,9 +192,11 @@ class Genome:
 
 def main():
     # Create Genome
-    genome = Genome()
+    # genome = Genome()
+    # Mutation.mutate_genome(genome)
 
     # Create Nodes
+    genome = Genome(fill_genome=False)
     genome.add_node(NodeType.INPUT, lambda x: x, 0.0)
     genome.add_node(NodeType.INPUT, lambda x: x, 0.0)
     genome.add_node(NodeType.INPUT, lambda x: x, 0.0)

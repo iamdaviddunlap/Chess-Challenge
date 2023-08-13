@@ -5,6 +5,7 @@ class Constants:
     outputs_count = 3
     min_val = -99.999
     max_val = 99.999
+    random_seed = 1
 
     # Parasites Settings
     num_hall_of_fame_parasites = 8

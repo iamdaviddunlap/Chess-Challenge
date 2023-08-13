@@ -73,49 +73,53 @@ def visualize_genome(genome, filename=None, show_plot=True, display_gates=False)
     # Draw the edges with splines and gates
 
     for (u, v, data), color in zip(G.edges(data=True), edge_colors):
-        if u == v:  # self-connection (loop)
-            connectionstyle = 'arc3,rad=0.5'  # more pronounced curvature for loops
-        else:
-            connectionstyle = 'arc3,rad=0.2'  # normal curvature
+        connection = next(
+            (c for c in genome.connections if c.input_node.node_id == u and c.output_node.node_id == v),
+            None)
+        if connection and connection.is_enabled:
+            if u == v:  # self-connection (loop)
+                connectionstyle = 'arc3,rad=0.5'  # more pronounced curvature for loops
+            else:
+                connectionstyle = 'arc3,rad=0.2'  # normal curvature
 
-        nx.draw_networkx_edges(G, pos, edgelist=[(u, v)], width=1.0, alpha=0.5, edge_color=[color],
-                               connectionstyle=connectionstyle)
+            nx.draw_networkx_edges(G, pos, edgelist=[(u, v)], width=1.0, alpha=0.5, edge_color=[color],
+                                   connectionstyle=connectionstyle)
 
-        node_radius = 0.05
+            node_radius = 0.05
 
-        # Control points for cubic Bezier curve
-        P0 = pos[u]
-        P3 = pos[v]
-        curvature = 0.2  # The same curvature radius used in connectionstyle
-        offset_y = (P3[1] - P0[1]) * curvature
-        P1 = ((P0[0] + P3[0]) / 2, (P0[1] + P3[1]) / 2 + offset_y)
-        P2 = P1  # Using the same point for P1 and P2 to create symmetric curvature
+            # Control points for cubic Bezier curve
+            P0 = pos[u]
+            P3 = pos[v]
+            curvature = 0.2  # The same curvature radius used in connectionstyle
+            offset_y = (P3[1] - P0[1]) * curvature
+            P1 = ((P0[0] + P3[0]) / 2, (P0[1] + P3[1]) / 2 + offset_y)
+            P2 = P1  # Using the same point for P1 and P2 to create symmetric curvature
 
-        midpoint = cubic_bezier_midpoint(P0, P1, P2, P3)
+            midpoint = cubic_bezier_midpoint(P0, P1, P2, P3)
 
-        if display_gates:  # Only display gates if display_gates is True
-            # Check if there is a gater node and draw the gate
-            connection = next(
-                (c for c in genome.connections if c.input_node.node_id == u and c.output_node.node_id == v),
-                None)
-            if connection and connection.gater_node:
-                x_gate, y_gate = midpoint  # Midpoint of the x and y coordinates
-                x_gater, y_gater = pos[connection.gater_node.node_id]  # Gater node coordinates
+            if display_gates:  # Only display gates if display_gates is True
+                # Check if there is a gater node and draw the gate
+                connection = next(
+                    (c for c in genome.connections if c.input_node.node_id == u and c.output_node.node_id == v),
+                    None)
+                if connection and connection.gater_node:
+                    x_gate, y_gate = midpoint  # Midpoint of the x and y coordinates
+                    x_gater, y_gater = pos[connection.gater_node.node_id]  # Gater node coordinates
 
-                # Calculate direction from midpoint to gater node
-                direction_x = x_gater - x_gate
-                direction_y = y_gater - y_gate
+                    # Calculate direction from midpoint to gater node
+                    direction_x = x_gater - x_gate
+                    direction_y = y_gater - y_gate
 
-                # Normalize the direction
-                length = (direction_x ** 2 + direction_y ** 2) ** 0.5
-                direction_x /= length
-                direction_y /= length
+                    # Normalize the direction
+                    length = (direction_x ** 2 + direction_y ** 2) ** 0.5
+                    direction_x /= length
+                    direction_y /= length
 
-                # Offset the gate line by the radius of the nodes
-                x_gate -= direction_x * node_radius
-                y_gate -= direction_y * node_radius
+                    # Offset the gate line by the radius of the nodes
+                    x_gate -= direction_x * node_radius
+                    y_gate -= direction_y * node_radius
 
-                plt.plot([x_gate, x_gater], [y_gate, y_gater], 'gray', linestyle='dotted')
+                    plt.plot([x_gate, x_gater], [y_gate, y_gater], 'gray', linestyle='dotted')
 
     # Draw labels
     nx.draw_networkx_labels(G, pos, font_size=12)

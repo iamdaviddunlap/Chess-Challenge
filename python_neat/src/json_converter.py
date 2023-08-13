@@ -7,7 +7,7 @@ def genome_to_json(genome):
     nodes_json = [
         {
             "node_id": node.node_id,
-            "node_type": node.node_type,
+            "node_type": node.node_type.value,
             "activation_function": node.activation_function.__name__,
             "bias": node.bias
         }

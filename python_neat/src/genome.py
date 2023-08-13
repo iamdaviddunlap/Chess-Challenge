@@ -1,10 +1,17 @@
 import torch
 import torch.nn.functional as F
 import networkx as nx
+from enum import Enum
 
-from src.innovation_handler import InnovationHandler
-from src.visualize import visualize_genome
-from src.json_converter import genome_to_json
+from innovation_handler import InnovationHandler
+from visualize import visualize_genome
+from json_converter import genome_to_json
+
+
+class NodeType(Enum):
+    INPUT = "input"
+    OUTPUT = "output"
+    HIDDEN = "hidden"
 
 
 class Node:
@@ -88,7 +95,7 @@ class Genome:
 
         # Determine activation order for input nodes
         input_nodes_subgraph = nx.DiGraph()
-        input_nodes = [node.node_id for node in self.nodes if node.node_type == 'input']
+        input_nodes = [node.node_id for node in self.nodes if node.node_type == NodeType.INPUT]
         for input_node_id in input_nodes:
             for successor in G.successors(input_node_id):
                 if successor in input_nodes:
@@ -121,7 +128,7 @@ class Genome:
         old_activations = self.activations.clone()
 
         # Update activations for input nodes
-        inputs_pheno_ids = [self.node_geno_to_pheno[node.node_id] for node in self.nodes if node.node_type == 'input']
+        inputs_pheno_ids = [self.node_geno_to_pheno[node.node_id] for node in self.nodes if node.node_type == NodeType.INPUT]
         if len(input_activations) != len(inputs_pheno_ids):
             raise Exception(f'Inputs of length {len(input_activations)} don\'t match network with input size '
                             f'{len(inputs_pheno_ids)}')
@@ -145,7 +152,7 @@ class Genome:
             # Update activations
             self.activations = new_activations
 
-        output_pheno_ids = [self.node_geno_to_pheno[x.node_id] for x in self.nodes if x.node_type == 'output']
+        output_pheno_ids = [self.node_geno_to_pheno[x.node_id] for x in self.nodes if x.node_type == NodeType.OUTPUT]
         outputs_tensor = self.activations[output_pheno_ids]
 
         if simulate_only:
@@ -162,11 +169,11 @@ def main():
     genome = Genome()
 
     # Create Nodes
-    genome.add_node('input', lambda x: x, 0.0)
-    genome.add_node('input', lambda x: x, 0.0)
-    genome.add_node('input', lambda x: x, 0.0)
-    genome.add_node('output', F.sigmoid, 10.679)
-    genome.add_node('hidden', F.sigmoid, -1.328)
+    genome.add_node(NodeType.INPUT, lambda x: x, 0.0)
+    genome.add_node(NodeType.INPUT, lambda x: x, 0.0)
+    genome.add_node(NodeType.INPUT, lambda x: x, 0.0)
+    genome.add_node(NodeType.OUTPUT, F.sigmoid, 10.679)
+    genome.add_node(NodeType.HIDDEN, F.sigmoid, -1.328)
 
     # Create Connections
     nodes = genome.nodes
@@ -192,8 +199,9 @@ def main():
     genome.determine_activation_order()
 
     # Activate the Network
-    input_activations = [0.0, 0.0, 1.0]
-    genome.activate(input_activations)
+    result1 = genome.activate([0.0, 0.0, 1.0])
+    genome.reset_state()
+    result2 = genome.activate([1.0, 1.0, 1.0])
 
     print("Activations:", genome.activations)
 

@@ -1,4 +1,4 @@
-from src.constants import Constants
+from constants import Constants
 
 
 class InnovationHandler:

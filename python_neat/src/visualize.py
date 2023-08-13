@@ -23,6 +23,7 @@ def cubic_bezier_midpoint(P0, P1, P2, P3):
 
 
 def visualize_genome(genome, filename=None, show_plot=True, display_gates=False):
+    from genome import NodeType
     """ Create a png to visualize the given genome. Note that display_gates if False by default because the code to
     display them doesn't work very well. """
     # Create a custom color map that goes from blue to gray to red
@@ -33,9 +34,9 @@ def visualize_genome(genome, filename=None, show_plot=True, display_gates=False)
 
     # Add nodes to the graph with attributes for positioning and bias
     for node in genome.nodes:
-        if node.node_type == 'input':
+        if node.node_type.name == NodeType.INPUT.name:
             layer = 0
-        elif node.node_type == 'output':
+        elif node.node_type.name == NodeType.OUTPUT.name:
             layer = 2
         else:  # hidden nodes
             layer = 1

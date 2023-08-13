@@ -16,7 +16,10 @@ class Constants:
     mutate_biases_prob = 0.6
     mutate_toggle_enable_prob = 0.1
     mutate_reenable_prob = 0.05
-    mutate_remove_connection_prob = 0.1
+    mutate_remove_connection_prob = 0.05
+    mutate_remove_node_prob = 0.01
+    mutate_add_gate_prob = 0.1
+    mutate_activation_function_prob = 0.1
     add_connection_prob = 0.3
     add_node_prob = 0.2
 

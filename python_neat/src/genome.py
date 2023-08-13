@@ -19,6 +19,23 @@ class NodeType(Enum):
     HIDDEN = "hidden"
 
 
+class ActivationFunction(Enum):
+    IDENTITY = "identity"
+    SIGMOID = "sigmoid"
+    RELU = "relu"
+    LEAKY_RELU = "leaky_relu"
+    TANH = "tanh"
+
+
+ACTIVATION_MAPPING = {
+    ActivationFunction.IDENTITY: lambda x: x,
+    ActivationFunction.SIGMOID: F.sigmoid,
+    ActivationFunction.RELU: F.relu,
+    ActivationFunction.LEAKY_RELU: F.leaky_relu,
+    ActivationFunction.TANH: F.tanh,
+}
+
+
 class Node:
     def __init__(self, node_id, node_type, activation_function, bias):
         self.node_id = node_id
@@ -39,6 +56,12 @@ class Connection:
         self.output_node = output_node
         self.is_enabled = True
 
+    def __str__(self):
+        if self.is_enabled:
+            return f"{self.connection_id}: {self.input_node} -> {self.output_node} :: {self.weight}"
+        else:
+            return f"{self.connection_id}: X| {self.input_node} -> {self.output_node} :: {self.weight} |X"
+
 
 class Genome:
     def __init__(self, innovation_handler=None, fill_genome=True):
@@ -56,12 +79,12 @@ class Genome:
 
         # Adding Output Nodes and Connections
         for i in range(Constants.outputs_count):
-            bias = round(random.random() * 2 - 1, 3)
+            bias = round(random.uniform(-1, 1), 3)
             self.add_node(NodeType.OUTPUT, lambda x: x, bias)
             for j in range(len(self.nodes) - (i + 1)):
                 cur_in = self.nodes[j]
                 cur_out = self.nodes[-1]
-                weight = round(random.random() * 2 - 1, 3)
+                weight = round(random.uniform(-1, 1), 3)
                 self.add_connection(weight, cur_in, None, cur_out)
 
         self.create_phenotype()
@@ -71,11 +94,14 @@ class Genome:
             node_id = self.innovation_handler.assign_node_id(source=source_con)
         node = Node(node_id, node_type, activation_function, bias)
         self.nodes.append(node)
+        return node
 
     def add_connection(self, weight, input_node, gater_node, output_node):
-        connection_id = self.innovation_handler.assign_connection_id(connection=(input_node.node_id, output_node.node_id))
+        connection_id = self.innovation_handler.assign_connection_id(
+            connection=(input_node.node_id, output_node.node_id))
         connection = Connection(connection_id, weight, input_node, gater_node, output_node)
         self.connections.append(connection)
+        return connection
 
     def create_phenotype(self):
         self.determine_activation_order()
@@ -154,7 +180,8 @@ class Genome:
         old_activations = self.activations.clone()
 
         # Update activations for input nodes
-        inputs_pheno_ids = [self.node_geno_to_pheno[node.node_id] for node in self.nodes if node.node_type == NodeType.INPUT]
+        inputs_pheno_ids = [self.node_geno_to_pheno[node.node_id] for node in self.nodes if
+                            node.node_type == NodeType.INPUT]
         if len(input_activations) != len(inputs_pheno_ids):
             raise Exception(f'Inputs of length {len(input_activations)} don\'t match network with input size '
                             f'{len(inputs_pheno_ids)}')
@@ -192,28 +219,29 @@ class Genome:
 
 def main():
     # Create Genome
-    # genome = Genome()
-    # Mutation.mutate_genome(genome)
+    genome = Genome()
+    Mutation.mutate_genome(genome)
+    x = 1
 
     # Create Nodes
-    genome = Genome(fill_genome=False)
-    genome.add_node(NodeType.INPUT, lambda x: x, 0.0)
-    genome.add_node(NodeType.INPUT, lambda x: x, 0.0)
-    genome.add_node(NodeType.INPUT, lambda x: x, 0.0)
-    genome.add_node(NodeType.OUTPUT, F.sigmoid, 10.679)
-    genome.add_node(NodeType.HIDDEN, F.sigmoid, -1.328)
-
-    # Create Connections
-    nodes = genome.nodes
-    genome.add_connection(5.594, nodes[0], None, nodes[3])
-    genome.add_connection(-4.893, nodes[1], nodes[0], nodes[3])
-    genome.add_connection(0.079, nodes[2], None, nodes[0])
-    genome.add_connection(-2.472, nodes[3], nodes[4], nodes[2])
-    genome.add_connection(4.36, nodes[3], None, nodes[3])
-    genome.add_connection(-1.311, nodes[0], None, nodes[4])
-    genome.add_connection(8.205, nodes[4], None, nodes[3])
-    genome.add_connection(-2.4, nodes[2], None, nodes[4])
-    genome.add_connection(0.558, nodes[4], None, nodes[4])
+    # genome = Genome(fill_genome=False)
+    # genome.add_node(NodeType.INPUT, lambda x: x, 0.0)
+    # genome.add_node(NodeType.INPUT, lambda x: x, 0.0)
+    # genome.add_node(NodeType.INPUT, lambda x: x, 0.0)
+    # genome.add_node(NodeType.OUTPUT, F.sigmoid, 10.679)
+    # genome.add_node(NodeType.HIDDEN, F.sigmoid, -1.328)
+    #
+    # # Create Connections
+    # nodes = genome.nodes
+    # genome.add_connection(5.594, nodes[0], None, nodes[3])
+    # genome.add_connection(-4.893, nodes[1], nodes[0], nodes[3])
+    # genome.add_connection(0.079, nodes[2], None, nodes[0])
+    # genome.add_connection(-2.472, nodes[3], nodes[4], nodes[2])
+    # genome.add_connection(4.36, nodes[3], None, nodes[3])
+    # genome.add_connection(-1.311, nodes[0], None, nodes[4])
+    # genome.add_connection(8.205, nodes[4], None, nodes[3])
+    # genome.add_connection(-2.4, nodes[2], None, nodes[4])
+    # genome.add_connection(0.558, nodes[4], None, nodes[4])
 
     # Create Phenotype
     genome.create_phenotype()

@@ -141,9 +141,10 @@ class Genome:
 
         # Add connections as edges in the graph
         for connection in self.connections:
-            input_node_id = connection.input_node.node_id
-            output_node_id = connection.output_node.node_id
-            G.add_edge(input_node_id, output_node_id)
+            if connection.is_enabled:
+                input_node_id = connection.input_node.node_id
+                output_node_id = connection.output_node.node_id
+                G.add_edge(input_node_id, output_node_id)
 
         # Determine activation order for input nodes
         input_nodes_subgraph = nx.DiGraph()
@@ -161,7 +162,18 @@ class Genome:
         while remaining_nodes:
             loop_counter += 1
             if loop_counter >= (len(self.nodes) * 100):
-                print('determine_activation_order stuck in an infinite loop!')
+                # We're in an infinite loop! We must resolve it
+                remaining_input_nodes = set(input_nodes) - set(activation_order)
+                if len(remaining_input_nodes) > 0:
+                    # We have input nodes not yet in the activation_order
+                    num_preds = {node_id: len(list(G.predecessors(node_id))) for node_id in remaining_input_nodes}
+                    node_with_least_predecessors = min(num_preds, key=num_preds.get)
+                    # Add it to the activation_order
+                    activation_order.append(node_with_least_predecessors)
+                    remaining_nodes.remove(node_with_least_predecessors)
+                    loop_counter = 0
+                else:
+                    print('determine_activation_order stuck in an unresolved infinite loop!')
             for node_id in list(remaining_nodes):
                 predecessors = [p for p in G.predecessors(node_id) if p != node_id]
                 if all(predecessor in activation_order for predecessor in predecessors):
@@ -220,6 +232,18 @@ class Genome:
 def main():
     # Create Genome
     genome = Genome()
+    Mutation.mutate_genome(genome)
+    Mutation.mutate_genome(genome)
+    Mutation.mutate_genome(genome)
+    Mutation.mutate_genome(genome)
+    Mutation.mutate_genome(genome)
+    Mutation.mutate_genome(genome)
+    Mutation.mutate_genome(genome)
+    Mutation.mutate_genome(genome)
+    Mutation.mutate_genome(genome)
+    Mutation.mutate_genome(genome)
+    Mutation.mutate_genome(genome)
+    Mutation.mutate_genome(genome)
     Mutation.mutate_genome(genome)
     x = 1
 

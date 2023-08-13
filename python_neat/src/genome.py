@@ -1,7 +1,10 @@
-from src.innovation_handler import InnovationHandler
 import torch
 import torch.nn.functional as F
 import networkx as nx
+
+from src.innovation_handler import InnovationHandler
+from src.visualize import visualize_genome
+from src.json_converter import genome_to_json
 
 
 class Node:
@@ -167,10 +170,10 @@ def main():
 
     # Create Connections
     nodes = genome.nodes
-    genome.add_connection(5.594, nodes[0], nodes[2], nodes[3])  # Example of using a gater node
-    genome.add_connection(-4.893, nodes[1], None, nodes[3])
+    genome.add_connection(5.594, nodes[0], None, nodes[3])
+    genome.add_connection(-4.893, nodes[1], nodes[0], nodes[3])
     genome.add_connection(0.079, nodes[2], None, nodes[0])
-    genome.add_connection(-2.472, nodes[3], None, nodes[2])
+    genome.add_connection(-2.472, nodes[3], nodes[4], nodes[2])
     genome.add_connection(4.36, nodes[3], None, nodes[3])
     genome.add_connection(-1.311, nodes[0], None, nodes[4])
     genome.add_connection(8.205, nodes[4], None, nodes[3])
@@ -179,6 +182,11 @@ def main():
 
     # Create Phenotype
     genome.create_phenotype()
+
+    visualize_genome(genome)
+
+    with open('genome.json', 'w+') as f:
+        f.write(genome_to_json(genome))
 
     # Determine Activation Order
     genome.determine_activation_order()

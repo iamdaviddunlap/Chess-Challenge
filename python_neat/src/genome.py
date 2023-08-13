@@ -5,9 +5,6 @@ import random
 from enum import Enum
 
 from innovation_handler import InnovationHandler
-from visualize import visualize_genome
-from json_converter import genome_to_json
-from mutation_handler import Mutation
 from constants import Constants
 
 random.seed(Constants.random_seed)
@@ -64,23 +61,25 @@ class Connection:
 
 
 class Genome:
-    def __init__(self, innovation_handler=None, fill_genome=True):
+    def __init__(self, fill_genome=True):
         self.nodes = []
         self.connections = []
         self.activations = torch.zeros(len(self.nodes))
-        self.innovation_handler = InnovationHandler() if innovation_handler is None else innovation_handler
 
         if not fill_genome:
             return
 
         # Adding Input Nodes
+        node_num = 0
         for _ in range(Constants.inputs_count):
-            self.add_node(NodeType.INPUT, lambda x: x, 0.0)
+            self.add_node(NodeType.INPUT, lambda x: x, 0.0, node_id=node_num)
+            node_num += 1
 
         # Adding Output Nodes and Connections
         for i in range(Constants.outputs_count):
             bias = round(random.uniform(-1, 1), 3)
-            self.add_node(NodeType.OUTPUT, lambda x: x, bias)
+            self.add_node(NodeType.OUTPUT, lambda x: x, bias, node_id=node_num)
+            node_num += 1
             for j in range(len(self.nodes) - (i + 1)):
                 cur_in = self.nodes[j]
                 cur_out = self.nodes[-1]
@@ -91,15 +90,17 @@ class Genome:
 
     def add_node(self, node_type, activation_function, bias, source_con=None, node_id=None):
         if node_id is None:
-            node_id = self.innovation_handler.assign_node_id(source=source_con)
+            node_id = InnovationHandler().assign_node_id(source=source_con)
         node = Node(node_id, node_type, activation_function, bias)
         self.nodes.append(node)
         return node
 
-    def add_connection(self, weight, input_node, gater_node, output_node):
-        connection_id = self.innovation_handler.assign_connection_id(
-            connection=(input_node.node_id, output_node.node_id))
+    def add_connection(self, weight, input_node, gater_node, output_node, connection_id=None, is_enabled=True):
+        if connection_id is None:
+            connection_id = InnovationHandler().assign_connection_id(
+                connection=(input_node.node_id, output_node.node_id))
         connection = Connection(connection_id, weight, input_node, gater_node, output_node)
+        connection.is_enabled = is_enabled
         self.connections.append(connection)
         return connection
 
@@ -228,63 +229,36 @@ class Genome:
     def reset_state(self):
         self.activations = torch.zeros(len(self.nodes))
 
+    def clone(self):
+        # Create a new Genome object without filling it
+        cloned_genome = Genome(fill_genome=False)
 
-def main():
-    # Create Genome
-    genome = Genome()
-    Mutation.mutate_genome(genome)
-    Mutation.mutate_genome(genome)
-    Mutation.mutate_genome(genome)
-    Mutation.mutate_genome(genome)
-    Mutation.mutate_genome(genome)
-    Mutation.mutate_genome(genome)
-    Mutation.mutate_genome(genome)
-    Mutation.mutate_genome(genome)
-    Mutation.mutate_genome(genome)
-    Mutation.mutate_genome(genome)
-    Mutation.mutate_genome(genome)
-    Mutation.mutate_genome(genome)
-    Mutation.mutate_genome(genome)
-    x = 1
+        # Mapping to keep track of the new nodes corresponding to the old nodes
+        node_mapping = {}
 
-    # Create Nodes
-    # genome = Genome(fill_genome=False)
-    # genome.add_node(NodeType.INPUT, lambda x: x, 0.0)
-    # genome.add_node(NodeType.INPUT, lambda x: x, 0.0)
-    # genome.add_node(NodeType.INPUT, lambda x: x, 0.0)
-    # genome.add_node(NodeType.OUTPUT, F.sigmoid, 10.679)
-    # genome.add_node(NodeType.HIDDEN, F.sigmoid, -1.328)
-    #
-    # # Create Connections
-    # nodes = genome.nodes
-    # genome.add_connection(5.594, nodes[0], None, nodes[3])
-    # genome.add_connection(-4.893, nodes[1], nodes[0], nodes[3])
-    # genome.add_connection(0.079, nodes[2], None, nodes[0])
-    # genome.add_connection(-2.472, nodes[3], nodes[4], nodes[2])
-    # genome.add_connection(4.36, nodes[3], None, nodes[3])
-    # genome.add_connection(-1.311, nodes[0], None, nodes[4])
-    # genome.add_connection(8.205, nodes[4], None, nodes[3])
-    # genome.add_connection(-2.4, nodes[2], None, nodes[4])
-    # genome.add_connection(0.558, nodes[4], None, nodes[4])
+        # Clone nodes
+        for node in self.nodes:
+            cloned_node = cloned_genome.add_node(
+                node_type=node.node_type,
+                activation_function=node.activation_function,
+                bias=node.bias,
+                node_id=node.node_id)
+            node_mapping[node.node_id] = cloned_node
 
-    # Create Phenotype
-    genome.create_phenotype()
+        # Clone connections
+        for connection in self.connections:
+            input_node = node_mapping[connection.input_node.node_id]
+            output_node = node_mapping[connection.output_node.node_id]
+            gater_node = node_mapping[connection.gater_node.node_id] if connection.gater_node else None
+            cloned_connection = cloned_genome.add_connection(
+                weight=connection.weight,
+                input_node=input_node,
+                gater_node=gater_node,
+                output_node=output_node)
+            cloned_connection.connection_id = connection.connection_id
+            cloned_connection.is_enabled = connection.is_enabled
 
-    visualize_genome(genome)
+        # Reconstruct the phenotype
+        cloned_genome.create_phenotype()
 
-    with open('genome.json', 'w+') as f:
-        f.write(genome_to_json(genome))
-
-    # Determine Activation Order
-    genome.determine_activation_order()
-
-    # Activate the Network
-    result1 = genome.activate([0.0, 0.0, 1.0])
-    genome.reset_state()
-    result2 = genome.activate([1.0, 1.0, 1.0])
-
-    print("Activations:", genome.activations)
-
-
-if __name__ == "__main__":
-    main()
+        return cloned_genome

@@ -8,7 +8,7 @@ class InnovationHandler:
         if cls._instance is None:
             cls._instance = super(InnovationHandler, cls).__new__(cls)
             cls._curOrganismId = 0
-            cls._curNodeId = 0
+            cls._curNodeId = Constants.inputs_count + Constants.outputs_count
             cls._curConnectionId = 0
             cls.node_id_mapping = {}
             cls.connection_id_mapping = {}

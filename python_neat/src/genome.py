@@ -145,7 +145,8 @@ class Genome:
             if connection.is_enabled:
                 input_node_id = connection.input_node.node_id
                 output_node_id = connection.output_node.node_id
-                G.add_edge(input_node_id, output_node_id)
+                if input_node_id != output_node_id:  # ignore self-connections for determining activation order
+                    G.add_edge(input_node_id, output_node_id)
 
         # Determine activation order for input nodes
         input_nodes_subgraph = nx.DiGraph()

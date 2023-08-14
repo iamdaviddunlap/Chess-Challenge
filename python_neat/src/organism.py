@@ -11,8 +11,8 @@ random.seed(Constants.random_seed)
 class Organism:
     def __init__(self, genome):
         self.genome = genome
-        self.fitness = -1
-        self.species_id = -1
+        self.fitness = random.uniform(0, 100)  # TODO should change this back to -1
+        self.species_id = random.randrange(1, 5)  # TODO should change this back to -1
         self.organism_id = InnovationHandler().get_next_organism_id()
 
     def reproduce(self, co_parent=None):

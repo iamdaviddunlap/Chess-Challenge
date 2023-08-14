@@ -28,8 +28,6 @@ def main():
         challengers_for_hosts = parasite_population.select_challengers(hall_of_fame)
         challengers_for_parasites = host_population.select_challengers(hall_of_fame)
 
-        host_population.speciate()
-
         # # Evaluate raw fitness for hosts
         # for host in host_population.organisms:
         #     cur_host_game_winners = Fitness.evaluate_fitness_sync(host, challengers_for_hosts, random)
@@ -76,10 +74,10 @@ def main():
         #     x = 1
         #
         # # Selection and breeding
-        # for population in [host_population, parasite_population]:
-        #     other_population = parasite_population if population == host_population else host_population
-        #     population_seeds = other_population.get_n_diff_species_champs(3)
-        #     population.select_and_reproduce(population_seeds)
+        for population in [host_population, parasite_population]:
+            other_population = parasite_population if population == host_population else host_population
+            population_seeds = other_population.get_n_diff_species_champs(3)
+            population.select_and_reproduce(population_seeds)
         #
         # # Form species in both populations
         # host_population.speciate()

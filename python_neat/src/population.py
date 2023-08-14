@@ -1,10 +1,10 @@
 import random
-import itertools
 
 from constants import Constants
 from genome import Genome
 from organism import Organism
 from mutation_handler import Mutation
+from innovation_handler import InnovationHandler
 from visualize import visualize_genome
 
 random.seed(Constants.random_seed)
@@ -95,8 +95,114 @@ class Population:
             self.organisms.remove(organism)
 
     def select_and_reproduce(self, other_population_seeds):
-        # TODO
-        pass
+        new_organisms = []
+
+        # Dictionary to hold average fitness per species
+        species_average_fitness = {}
+        total_avg_fitness = 0
+
+        # Clear species reps
+        self.species_reps.clear()
+
+        # First pass over species list. Eliminate the weakest, find the average fitness, save the species champ, and
+        # reassign the species rep as a random member of the species
+        species_champs = []
+        for species_id in self.species_ids:
+            self.eliminate_species_weakest(species_id)
+            species_organisms = [o for o in self.organisms if o.species_id == species_id]
+            avg_fitness = sum(o.fitness for o in species_organisms) / len(species_organisms)
+            species_champ = max(species_organisms, key=lambda o: o.fitness)
+            species_rep = species_organisms[random.randint(0, len(species_organisms) - 1)]
+            self.species_reps.append(species_rep)
+            species_champs.append(species_champ)
+            species_average_fitness[species_id] = avg_fitness
+            total_avg_fitness += avg_fitness
+
+        # Add some completely random children
+        num_random_children = 5
+        max_mutations = 20
+        for i in range(num_random_children):
+            genome = Genome()
+            organism = Organism(genome)
+            num_mutations = random.randint(2, max_mutations)
+            for j in range(num_mutations):
+                Mutation.mutate_genome(organism.genome)
+            new_organisms.append(organism)
+
+        # Find the "superchamp"
+        super_champ = self.get_superchamp()
+
+        # Create special clones from super champ
+        for i in range(Constants.superchamp_offspring):
+            new_superchamp_genome = super_champ.genome.clone()
+            Mutation.mutate_weights(new_superchamp_genome)
+            new_superchamp_child = Organism(new_superchamp_genome)
+            new_organisms.append(new_superchamp_child)
+
+        # Directly clone the species champions
+        for champ in species_champs:
+            cloned_genome = champ.genome.clone()
+            new_organism = Organism(cloned_genome)
+            new_organisms.append(new_organism)
+
+        # Reproduction phase
+        remaining = Constants.population_size - len(new_organisms)
+        for species_id in self.species_ids:
+            species_new_organisms = []
+            species_organisms = [o for o in self.organisms if o.species_id == species_id]
+            average_fitness = species_average_fitness[species_id]
+            num_species_offspring = max(int((average_fitness / total_avg_fitness) * remaining), 1)
+            for i in range(num_species_offspring):
+                if len(species_organisms) > 1 and random.random() > Constants.mutate_only_prob:
+                    # Sexually reproduce
+                    offspring = None
+                    if len(self.species_ids) > 1 and random.random() < Constants.cross_species_mating_prob:
+                        # Do cross-species mating
+                        other_species_id = species_id
+                        while other_species_id == species_id:
+                            other_species_id = self.species_ids[random.randint(0, len(self.species_ids) - 1)]
+                        champ_organism = species_champs[self.species_ids.index(other_species_id)]
+                        index = random.randint(0, len(species_organisms) - 1)
+                        offspring = species_organisms[index].reproduce(champ_organism)
+                    elif random.random() < Constants.cross_population_mating_prob:
+                        other_pop_organism = other_population_seeds[random.randint(0, len(other_population_seeds) - 1)]
+                        index = random.randint(0, len(species_organisms) - 1)
+                        offspring = species_organisms[index].reproduce(other_pop_organism)
+                    else:
+                        index1 = index2 = -1
+                        while index1 == index2:
+                            index1 = random.randint(0, len(species_organisms) - 1)
+                            index2 = random.randint(0, len(species_organisms) - 1)
+                        offspring = species_organisms[index1].reproduce(species_organisms[index2])
+                    # Decide whether or not to mutate baby
+                    if random.random() > Constants.mate_only_prob:
+                        Mutation.mutate_genome(offspring.genome)
+                    species_new_organisms.append(offspring)
+                else:
+                    # Asexually reproduce
+                    index = random.randint(0, len(species_organisms) - 1)
+                    offspring = species_organisms[index].reproduce()
+                    species_new_organisms.append(offspring)
+
+            new_organisms.extend(species_new_organisms)
+
+        # Fill in the rest of the population by having the top organisms asexually reproduce
+        remaining = Constants.population_size - len(new_organisms)
+        asexual_parents = sorted(self.organisms, key=lambda o: o.fitness, reverse=True)[:remaining]
+        for parent in asexual_parents:
+            offspring = parent.reproduce()
+            new_organisms.append(offspring)
+
+        # Cut off organisms if we created too many
+        new_organisms = new_organisms[:Constants.population_size]
+
+        # Replace the old population with the new one
+        self.organisms.clear()
+        self.organisms.extend(new_organisms)
+
+        # Clear unique innovation maps
+        InnovationHandler().connection_id_mapping.clear()
+        InnovationHandler().node_id_mapping.clear()
 
     def speciate(self):
         for organism in self.organisms:

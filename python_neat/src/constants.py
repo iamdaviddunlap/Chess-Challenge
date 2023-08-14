@@ -32,6 +32,7 @@ class Constants:
     # Compatibility Settings
     disjoint_coeff = 2.0
     excess_coeff = 2.0
+    gates_coeff = 1.0
     weight_coeff = 1.0
     species_compat_thresh_initial = 4.5
     species_compat_modifier = 0.3

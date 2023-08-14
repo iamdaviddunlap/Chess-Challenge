@@ -173,7 +173,7 @@ class Mutation:
         target_count = {node: 0 for node in genome.nodes}
 
         for conn in genome.connections:
-            if conn.is_enabled:
+            if conn.is_enabled and conn.input_node.node_id != conn.output_node.node_id:
                 source_count[conn.input_node] += 1
                 target_count[conn.output_node] += 1
 

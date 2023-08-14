@@ -5,6 +5,7 @@ from constants import Constants
 from genome import Genome
 from organism import Organism
 from mutation_handler import Mutation
+from visualize import visualize_genome
 
 random.seed(Constants.random_seed)
 
@@ -21,6 +22,16 @@ class Population:
         for i in range(Constants.population_size):
             genome = Genome()
             organism = Organism(genome)
+            # TODO don't mutate so much
+            Mutation.mutate_genome(organism.genome)
+            Mutation.mutate_genome(organism.genome)
+            Mutation.mutate_genome(organism.genome)
+            Mutation.mutate_genome(organism.genome)
+            Mutation.mutate_genome(organism.genome)
+            Mutation.mutate_genome(organism.genome)
+            Mutation.mutate_genome(organism.genome)
+            Mutation.mutate_genome(organism.genome)
+            Mutation.mutate_genome(organism.genome)
             Mutation.mutate_genome(organism.genome)
             self.organisms.append(organism)
         self.speciate()
@@ -88,8 +99,41 @@ class Population:
         pass
 
     def speciate(self):
-        # TODO
-        pass
+        for organism in self.organisms:
+            found_species = False
+            for species_rep in self.species_reps:
+                gene_difference = organism.genome.genetic_difference(species_rep.genome)
+                if gene_difference <= self._species_compat_thresh:
+                    organism.species_id = species_rep.species_id
+                    found_species = True
+                    break
+
+            if not found_species:
+                new_id = self.get_next_species_id()
+                organism.species_id = new_id
+                self.species_reps.append(organism)
+
+        # Clear the species_ids list
+        self.species_ids.clear()
+
+        # Assign new unique species IDs by going through the Organisms list
+        unique_species_ids = list(set(organism.species_id for organism in self.organisms))
+
+        # Replace the species_ids list with the new unique species IDs
+        self.species_ids.extend(unique_species_ids)
+
+        # Remove organisms from species_reps that are no longer representatives of any species
+        self.species_reps[:] = [rep for rep in self.species_reps if rep.species_id in self.species_ids]
+
+        # Adjust SpeciesCompatThresh to target SpeciesCountTarget number of species
+        if len(self.species_ids) < Constants.species_count_target:
+            self._species_compat_thresh -= Constants.species_compat_modifier
+        elif len(self.species_ids) > Constants.species_count_target:
+            self._species_compat_thresh += Constants.species_compat_modifier
+
+        # Ensure the SpeciesCompatThresh can't get too low
+        if self._species_compat_thresh < Constants.species_compat_modifier:
+            self._species_compat_thresh = Constants.species_compat_modifier
 
     def get_next_species_id(self):
         cur_id = self._cur_species_id

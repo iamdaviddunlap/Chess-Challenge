@@ -28,6 +28,8 @@ def main():
         challengers_for_hosts = parasite_population.select_challengers(hall_of_fame)
         challengers_for_parasites = host_population.select_challengers(hall_of_fame)
 
+        host_population.speciate()
+
         # # Evaluate raw fitness for hosts
         # for host in host_population.organisms:
         #     cur_host_game_winners = Fitness.evaluate_fitness_sync(host, challengers_for_hosts, random)

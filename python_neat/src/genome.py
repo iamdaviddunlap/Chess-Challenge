@@ -6,6 +6,7 @@ from enum import Enum
 
 from innovation_handler import InnovationHandler
 from constants import Constants
+from visualize import visualize_genome
 
 random.seed(Constants.random_seed)
 
@@ -155,12 +156,18 @@ class Genome:
             for successor in G.successors(input_node_id):
                 if successor in input_nodes:
                     input_nodes_subgraph.add_edge(input_node_id, successor)
-        input_activation_order = list(nx.topological_sort(input_nodes_subgraph))
+        try:
+            input_activation_order = list(nx.topological_sort(input_nodes_subgraph))
+        except Exception as e:
+            # There are cycles in the input so there's no ideal order. Just activate them in node_id order
+            input_activation_order = input_nodes
 
         # Extend activation order with remaining nodes
         activation_order = input_activation_order[:]
         remaining_nodes = set(G.nodes) - set(input_activation_order)
         loop_counter = 0
+        least_preds = 100000
+        least_preds_node = None
         while remaining_nodes:
             loop_counter += 1
             if loop_counter >= (len(self.nodes) * 100):
@@ -173,16 +180,85 @@ class Genome:
                     # Add it to the activation_order
                     activation_order.append(node_with_least_predecessors)
                     remaining_nodes.remove(node_with_least_predecessors)
+                    least_preds = 100000
+                    least_preds_node = None
                     loop_counter = 0
                 else:
-                    print('determine_activation_order stuck in an unresolved infinite loop!')
+                    if least_preds_node is None: raise Exception('Stuck in loop, and haven\'t yet found a suitable node to add')
+                    activation_order.append(least_preds_node)
+                    remaining_nodes.remove(least_preds_node)
+                    least_preds = 100000
+                    least_preds_node = None
+                    loop_counter = 0
             for node_id in list(remaining_nodes):
                 predecessors = [p for p in G.predecessors(node_id) if p != node_id]
+                if len(predecessors) < least_preds:
+                    least_preds = len(predecessors)
+                    least_preds_node = node_id
                 if all(predecessor in activation_order for predecessor in predecessors):
                     activation_order.append(node_id)
                     remaining_nodes.remove(node_id)
+                    loop_counter = 0
+                    least_preds = 100000
+                    least_preds_node = None
 
         self.activation_order = activation_order
+
+    def genetic_difference(self, genome2):
+        genome1_innovation_numbers = set(connection.connection_id for connection in self.connections)
+        genome2_innovation_numbers = set(connection.connection_id for connection in genome2.connections)
+
+        smaller_max_innovation_number = min(max(genome1_innovation_numbers), max(genome2_innovation_numbers))
+
+        matching_innovation_numbers = genome1_innovation_numbers & genome2_innovation_numbers
+
+        disjoint_count = sum(
+            1 for n in genome1_innovation_numbers - matching_innovation_numbers if n <= smaller_max_innovation_number) + \
+                         sum(1 for n in genome2_innovation_numbers - matching_innovation_numbers if
+                             n <= smaller_max_innovation_number)
+
+        excess_count = sum(
+            1 for n in genome1_innovation_numbers - matching_innovation_numbers if n > smaller_max_innovation_number) + \
+                       sum(1 for n in genome2_innovation_numbers - matching_innovation_numbers if
+                           n > smaller_max_innovation_number)
+
+        weight_difference_sum = 0
+        gater_difference_count = 0
+        total_gates = 0
+        for innovation_number in matching_innovation_numbers:
+            genome1_conn = [connection for connection in self.connections if connection.connection_id == innovation_number][0]
+            genome2_conn = [connection for connection in genome2.connections if connection.connection_id == innovation_number][0]
+            weight_difference_sum += abs(genome1_conn.weight - genome2_conn.weight)
+            if (genome1_conn.gater_node is not None) or (genome2_conn.gater_node is not None):
+                total_gates += 1
+                genome1_gater_node_id = genome1_conn.gater_node.node_id if genome1_conn.gater_node else None
+                genome2_gater_node_id = genome2_conn.gater_node.node_id if genome2_conn.gater_node else None
+                if genome1_gater_node_id != genome2_gater_node_id:
+                    gater_difference_count += 1
+
+        average_weight_difference = weight_difference_sum / len(matching_innovation_numbers) \
+            if matching_innovation_numbers else 0
+
+        scaled_gates_difference = (gater_difference_count / total_gates) if total_gates > 0 else 0
+
+        shared_node_ids = [node.node_id for node in self.nodes if any(node2.node_id == node.node_id for node2 in genome2.nodes)]
+        bias_difference_sum = 0
+        for shared_node_id in shared_node_ids :
+            genome1_node = [node for node in self.nodes if node.node_id == shared_node_id][0]
+            genome2_node = [node for node in genome2.nodes if node.node_id == shared_node_id][0]
+            bias_difference_sum += abs(genome1_node.bias - genome2_node.bias)
+
+        average_bias_difference = bias_difference_sum / len(shared_node_ids) if shared_node_ids else 0
+        average_combined_difference = (average_weight_difference + average_bias_difference) / 2.0
+
+        n = max(len(self.connections), len(genome2.connections))
+
+        genetic_difference = ((Constants.excess_coeff * excess_count) / n) + \
+                             ((Constants.disjoint_coeff * disjoint_count) / n) + \
+                             (Constants.weight_coeff * average_combined_difference) + \
+                             (Constants.gates_coeff * scaled_gates_difference)
+
+        return genetic_difference
 
     def activate(self, input_activations, max_iterations=10, simulate_only=False):
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

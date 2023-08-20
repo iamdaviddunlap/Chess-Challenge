@@ -9,11 +9,14 @@ random.seed(Constants.random_seed)
 
 
 class Organism:
-    def __init__(self, genome):
+    def __init__(self, genome, organism_id=None):
         self.genome = genome
         self.fitness = random.uniform(0, 100)  # TODO should change this back to -1
         self.species_id = random.randrange(1, 5)  # TODO should change this back to -1
-        self.organism_id = InnovationHandler().get_next_organism_id()
+        if organism_id is not None:
+            self.organism_id = organism_id
+        else:
+            self.organism_id = InnovationHandler().get_next_organism_id()
 
     def reproduce(self, co_parent=None):
         if co_parent is None:
@@ -109,6 +112,12 @@ class Organism:
 
         offspring_genome.create_phenotype()
         return offspring_genome
+
+    def clone(self):
+        clone_organism = Organism(self.genome.clone(), organism_id=self.organism_id)
+        clone_organism.fitness = self.fitness
+        clone_organism.species_id = self.species_id
+        return clone_organism
 
     def __str__(self):
         return f"Organism #{self.organism_id}"

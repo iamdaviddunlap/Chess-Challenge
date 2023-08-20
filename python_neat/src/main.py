@@ -1,12 +1,15 @@
+from concurrent.futures import ProcessPoolExecutor
+from collections import defaultdict
+from tqdm import tqdm
+import time
+
 from visualize import visualize_genome
 from json_converter import genome_to_json
 from organism import Organism
 from genome import Genome
 from mutation_handler import Mutation
 from population import Population
-
-
-from collections import defaultdict
+from fitness import Fitness
 
 
 def main():
@@ -28,24 +31,24 @@ def main():
         challengers_for_hosts = parasite_population.select_challengers(hall_of_fame)
         challengers_for_parasites = host_population.select_challengers(hall_of_fame)
 
-        # # Evaluate raw fitness for hosts
-        # for host in host_population.organisms:
-        #     cur_host_game_winners = Fitness.evaluate_fitness_sync(host, challengers_for_hosts, random)
-        #
-        #     if host in challengers_for_parasites:
-        #         for original_key, value in cur_host_game_winners.items():
-        #             all_host_results[original_key] = value
-        #             new_value = -value
-        #             new_key = (original_key[1], original_key[0], not original_key[2])
-        #             parasite_precalc_results[new_key] = new_value
-        #     else:
-        #         all_host_results.update(cur_host_game_winners)
-        #
-        # # Evaluate raw fitness of parasites
-        # for parasite in parasite_population.organisms:
-        #     cur_parasite_game_winners = Fitness.evaluate_fitness_sync(parasite, challengers_for_parasites, random, parasite_precalc_results)
-        #     all_parasite_results.update(cur_parasite_game_winners)
-        #
+        # Evaluate raw fitness for hosts
+        for host in tqdm(host_population.organisms):
+            cur_host_game_winners = Fitness.evaluate_fitness_sync(host, challengers_for_hosts)
+
+            if host in challengers_for_parasites:
+                for original_key, value in cur_host_game_winners.items():
+                    all_host_results[original_key] = value
+                    new_value = -value
+                    new_key = (original_key[1], original_key[0], not original_key[2])
+                    parasite_precalc_results[new_key] = new_value
+            else:
+                all_host_results.update(cur_host_game_winners)
+
+        # Evaluate raw fitness of parasites
+        for parasite in parasite_population.organisms:
+            cur_parasite_game_winners = Fitness.evaluate_fitness_sync(parasite, challengers_for_parasites, parasite_precalc_results)
+            all_parasite_results.update(cur_parasite_game_winners)
+
         # # Calculate fitnesses for the organisms in each population
         # penalize_size = True
         # Fitness.assign_fitnesses(host_population, all_host_results, penalize_size)
@@ -68,16 +71,16 @@ def main():
         # print(f"The {fitter_champ_str} is fitter")
         # print("----------------------------")
         #
-        # parasite_loss2 = GameController.play_labeled_dataset_single_player(parasite_champ, random, dataset)
+        # parasite_loss2 = GameController.play_labeled_dataset_single_player(parasite_champ, dataset)
         #
         # if generation == 999:
         #     x = 1
         #
         # # Selection and breeding
-        for population in [host_population, parasite_population]:
-            other_population = parasite_population if population == host_population else host_population
-            population_seeds = other_population.get_n_diff_species_champs(3)
-            population.select_and_reproduce(population_seeds)
+        # for population in [host_population, parasite_population]:
+        #     other_population = parasite_population if population == host_population else host_population
+        #     population_seeds = other_population.get_n_diff_species_champs(3)
+        #     population.select_and_reproduce(population_seeds)
         #
         # # Form species in both populations
         # host_population.speciate()

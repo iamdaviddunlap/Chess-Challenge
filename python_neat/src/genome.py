@@ -27,10 +27,10 @@ class ActivationFunction(Enum):
 
 ACTIVATION_MAPPING = {
     ActivationFunction.IDENTITY: lambda x: x,
-    ActivationFunction.SIGMOID: F.sigmoid,
-    ActivationFunction.RELU: F.relu,
+    ActivationFunction.SIGMOID: torch.sigmoid,
+    ActivationFunction.RELU: torch.relu,
     ActivationFunction.LEAKY_RELU: F.leaky_relu,
-    ActivationFunction.TANH: F.tanh,
+    ActivationFunction.TANH: torch.tanh,
 }
 
 
@@ -266,7 +266,7 @@ class Genome:
         # Move tensors to the GPU
         self.activations = self.activations.to(device)
         self.connection_matrix = self.connection_matrix.to(device)
-        input_activations_tensor = torch.tensor(input_activations).to(device)
+        input_activations_tensor = torch.tensor(input_activations).to(device).float()
         old_activations = self.activations.clone()
 
         # Update activations for input nodes

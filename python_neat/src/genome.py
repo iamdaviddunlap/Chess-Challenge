@@ -282,7 +282,7 @@ class Genome:
             new_activations = self.activations.clone()
             for node_id in self.activation_order:
                 phen_id = self.node_geno_to_pheno[node_id]
-                node = self.nodes[phen_id]
+                node = next(x for x in self.nodes if x.node_id == node_id)
                 gates_mask = ~torch.isnan(self.connection_matrix[:, phen_id, 1])
                 incoming_activations = self.connection_matrix[:, phen_id, 0] * new_activations
                 incoming_activations[gates_mask] *= new_activations[

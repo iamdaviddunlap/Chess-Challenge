@@ -44,8 +44,17 @@ def main():
         #                 new_key = (key[1], key[0], not key[2])
         #                 parasite_precalc_results[new_key] = new_value
         # Evaluate raw fitness for hosts
-        all_host_results, parasite_precalc_results = \
-            Fitness.evaluate_fitness_async(host_population.organisms, challengers_for_hosts, challengers_for_parasites)
+
+        all_host_results, parasite_precalc_results = Fitness.evaluate_fitness_async(
+            organisms=host_population.organisms,
+            champions=challengers_for_hosts,
+            challengers_for_parasites=challengers_for_parasites)
+
+        all_parasite_results, _ = Fitness.evaluate_fitness_async(
+            organisms=parasite_population.organisms,
+            champions=challengers_for_parasites,
+            challengers_for_parasites=challengers_for_hosts,
+            precalc_results=parasite_precalc_results)
 
         x = 1
 

@@ -80,6 +80,13 @@ class Fitness:
 
         for host in organisms:
             game_args = Fitness.prepare_game_args(host, champions)
+            key_func = lambda x: (x[0].organism_id, x[1].organism_id, x[2])
+            if precalc_results is not None:
+                non_dup_game_args = [x for x in game_args if key_func(x) not in precalc_results.keys()]
+                precalced = {key_func(x): precalc_results[key_func(x)]
+                             for x in game_args if x not in non_dup_game_args}
+                game_args = non_dup_game_args
+                all_host_results = {**all_host_results, **precalced}
             all_game_args.extend(game_args)
 
         with Pool(processes=os.cpu_count()) as pool:
@@ -88,12 +95,14 @@ class Fitness:
                 value = result
                 all_host_results[original_key] = value
 
-                # Check if the host is in challengers_for_parasites and update the parasite results
-                host = original_key[0]  # Assuming the host ID is the first element in the key
-                if host in challengers_for_parasites_ids:
-                    new_value = -value
-                    new_key = (original_key[1], original_key[0], not original_key[2])
-                    parasite_precalc_results[new_key] = new_value
+                # Only create precalc_results if we didn't get any - ie the organisms are from the host population
+                if precalc_results is None:
+                    # Check if the host is in challengers_for_parasites and update the parasite results
+                    host = original_key[0]  # Assuming the host ID is the first element in the key
+                    if host in challengers_for_parasites_ids:
+                        new_value = -value
+                        new_key = (original_key[1], original_key[0], not original_key[2])
+                        parasite_precalc_results[new_key] = new_value
 
         return all_host_results, parasite_precalc_results
 

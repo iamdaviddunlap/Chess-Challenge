@@ -119,5 +119,8 @@ class Organism:
         clone_organism.species_id = self.species_id
         return clone_organism
 
+    def to_device(self, device):
+        self.genome.to_device(device)
+
     def __str__(self):
         return f"Organism #{self.organism_id}"

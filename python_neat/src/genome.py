@@ -260,11 +260,8 @@ class Genome:
 
         return genetic_difference
 
-    def activate(self, input_activations, max_iterations=10, simulate_only=False):
-        # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        device = "cpu"
-
-        # Move tensors to the GPU
+    def activate(self, input_activations, max_iterations=10, simulate_only=False, device="cpu"):
+        # Move tensors to the correct device
         self.activations = self.activations.to(device)
         self.connection_matrix = self.connection_matrix.to(device)
         input_activations_tensor = torch.tensor(input_activations).to(device).float()
@@ -340,3 +337,7 @@ class Genome:
         cloned_genome.create_phenotype()
 
         return cloned_genome
+
+    def to_device(self, device):
+        self.activations = self.activations.to(device)
+        self.connection_matrix = self.connection_matrix.to(device)

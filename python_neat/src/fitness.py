@@ -3,6 +3,9 @@ from threading import Lock
 from concurrent.futures import ProcessPoolExecutor
 import time
 import math
+from tqdm import tqdm
+import os
+from multiprocessing import Pool
 
 from constants import Constants
 from game_controller import GameController
@@ -50,21 +53,49 @@ class Fitness:
     #     return results
 
     @staticmethod
-    def evaluate_fitness_sync(host, challengers, precalc_results=None):
-        results = {}
-        start = time.time()
+    def play_game_sync(args):
+        host, challenger, host_is_white, precalc_results = args
+        key = (host.organism_id, challenger.organism_id, host_is_white)
+        if precalc_results and key in precalc_results:
+            result = precalc_results[key]
+        else:
+            result = GameController.play_game(host, challenger, host_is_white)
+        return key, result
+
+    @staticmethod
+    def prepare_game_args(host, challengers, precalc_results=None):
+        game_args = []
         for challenger in challengers:
             for i in range(2):
                 host_is_white = i == 0
-                key = (host.organism_id, challenger.organism_id, host_is_white)
-                if precalc_results and key in precalc_results:
-                    result = precalc_results[key]
-                else:
-                    result = GameController.play_game(host, challenger, host_is_white)
-                results[key] = result
+                game_args.append((host, challenger, host_is_white, precalc_results))
+        return game_args
 
-        print(f'Sync finished playing {len(results)} games in {time.time() - start}s')
-        return results
+    @staticmethod
+    def evaluate_fitness_async(organisms, champions, challengers_for_parasites, precalc_results=None):
+        all_game_args = []
+        all_host_results = {}  # Dictionary to hold the host results
+        parasite_precalc_results = {}  # Dictionary to hold the parasite precalculation results
+        challengers_for_parasites_ids = [x.organism_id for x in challengers_for_parasites]
+
+        for host in organisms:
+            game_args = Fitness.prepare_game_args(host, champions)
+            all_game_args.extend(game_args)
+
+        with Pool(processes=os.cpu_count()) as pool:
+            for key, result in tqdm(pool.imap(Fitness.play_game_sync, all_game_args), total=len(all_game_args)):
+                original_key = key
+                value = result
+                all_host_results[original_key] = value
+
+                # Check if the host is in challengers_for_parasites and update the parasite results
+                host = original_key[0]  # Assuming the host ID is the first element in the key
+                if host in challengers_for_parasites_ids:
+                    new_value = -value
+                    new_key = (original_key[1], original_key[0], not original_key[2])
+                    parasite_precalc_results[new_key] = new_value
+
+        return all_host_results, parasite_precalc_results
 
     # @staticmethod
     # def assign_fitnesses(host_population, host_game_results, penalize_size=False):

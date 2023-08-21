@@ -26,7 +26,7 @@ class ActivationFunction(Enum):
 
 
 ACTIVATION_MAPPING = {
-    ActivationFunction.IDENTITY: lambda x: x,
+    ActivationFunction.IDENTITY: torch.nn.Identity(),
     ActivationFunction.SIGMOID: torch.sigmoid,
     ActivationFunction.RELU: torch.relu,
     ActivationFunction.LEAKY_RELU: F.leaky_relu,
@@ -73,13 +73,13 @@ class Genome:
         # Adding Input Nodes
         node_num = 0
         for _ in range(Constants.inputs_count):
-            self.add_node(NodeType.INPUT, lambda x: x, 0.0, node_id=node_num)
+            self.add_node(NodeType.INPUT, ACTIVATION_MAPPING[ActivationFunction.IDENTITY], 0.0, node_id=node_num)
             node_num += 1
 
         # Adding Output Nodes and Connections
         for i in range(Constants.outputs_count):
             bias = round(random.uniform(-1, 1), 3)
-            self.add_node(NodeType.OUTPUT, lambda x: x, bias, node_id=node_num)
+            self.add_node(NodeType.OUTPUT, ACTIVATION_MAPPING[ActivationFunction.IDENTITY], bias, node_id=node_num)
             node_num += 1
             for j in range(len(self.nodes) - (i + 1)):
                 cur_in = self.nodes[j]
@@ -261,7 +261,8 @@ class Genome:
         return genetic_difference
 
     def activate(self, input_activations, max_iterations=10, simulate_only=False):
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        device = "cpu"
 
         # Move tensors to the GPU
         self.activations = self.activations.to(device)

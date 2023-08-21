@@ -2,6 +2,8 @@ from concurrent.futures import ProcessPoolExecutor
 from collections import defaultdict
 from tqdm import tqdm
 import time
+import os
+from multiprocessing import Pool
 
 from visualize import visualize_genome
 from json_converter import genome_to_json
@@ -31,23 +33,26 @@ def main():
         challengers_for_hosts = parasite_population.select_challengers(hall_of_fame)
         challengers_for_parasites = host_population.select_challengers(hall_of_fame)
 
+        # # Evaluate raw fitness for hosts
+        # with Pool(processes=os.cpu_count()) as pool:
+        #     for host in tqdm(host_population.organisms):
+        #         game_args = Fitness.prepare_game_args(host, challengers_for_hosts)
+        #         for key, result in pool.imap(Fitness.play_game_sync, game_args):
+        #             all_host_results[key] = result
+        #             if host in challengers_for_parasites:
+        #                 new_value = -result
+        #                 new_key = (key[1], key[0], not key[2])
+        #                 parasite_precalc_results[new_key] = new_value
         # Evaluate raw fitness for hosts
-        for host in tqdm(host_population.organisms):
-            cur_host_game_winners = Fitness.evaluate_fitness_sync(host, challengers_for_hosts)
+        all_host_results, parasite_precalc_results = \
+            Fitness.evaluate_fitness_async(host_population.organisms, challengers_for_hosts, challengers_for_parasites)
 
-            if host in challengers_for_parasites:
-                for original_key, value in cur_host_game_winners.items():
-                    all_host_results[original_key] = value
-                    new_value = -value
-                    new_key = (original_key[1], original_key[0], not original_key[2])
-                    parasite_precalc_results[new_key] = new_value
-            else:
-                all_host_results.update(cur_host_game_winners)
+        x = 1
 
-        # Evaluate raw fitness of parasites
-        for parasite in parasite_population.organisms:
-            cur_parasite_game_winners = Fitness.evaluate_fitness_sync(parasite, challengers_for_parasites, parasite_precalc_results)
-            all_parasite_results.update(cur_parasite_game_winners)
+        # # Evaluate raw fitness of parasites
+        # for parasite in parasite_population.organisms:
+        #     cur_parasite_game_winners = Fitness.evaluate_fitness_sync(parasite, challengers_for_parasites, parasite_precalc_results)
+        #     all_parasite_results.update(cur_parasite_game_winners)
 
         # # Calculate fitnesses for the organisms in each population
         # penalize_size = True

@@ -12,45 +12,6 @@ from game_controller import GameController
 
 
 class Fitness:
-    # @staticmethod
-    # def convert_game_result_to_fitness(result):
-    #     # TODO untested
-    #     if result == 1:
-    #         return Constants.fitness_reward_win
-    #     elif result == 0:
-    #         return Constants.fitness_reward_draw
-    #     elif result == -1:
-    #         return Constants.fitness_reward_loss
-    #     else:
-    #         raise ValueError("Result out of range")
-
-    # @staticmethod
-    # def evaluate_fitness_async(host, challengers, precalc_results=None):
-    #     results = {}
-    #
-    #     # Function to play a game and record the result
-    #     def play_and_record(challenger, i):
-    #         host_is_white = i == 0
-    #         key = (host.organism_id, challenger.organism_id, host_is_white)
-    #         if precalc_results and key in precalc_results:
-    #             result = precalc_results[key]
-    #         else:
-    #             host_clone = host.clone()
-    #             challenger_clone = challenger.clone()
-    #             result = GameController.play_game(host_clone, challenger_clone, host_is_white)
-    #
-    #         results[key] = result
-    #
-    #     # Use ThreadPoolExecutor to run the games concurrently
-    #     start = time.time()
-    #     with ProcessPoolExecutor() as executor:
-    #         # Submit all the games as separate tasks
-    #         for challenger in challengers:
-    #             for i in range(2):
-    #                 executor.submit(play_and_record, challenger, i)
-    #
-    #     print(f'Async finished playing {len(results)} games in {time.time() - start}s')
-    #     return results
 
     @staticmethod
     def play_game_sync(args):
@@ -89,7 +50,7 @@ class Fitness:
                 all_host_results = {**all_host_results, **precalced}
             all_game_args.extend(game_args)
 
-        with Pool(processes=os.cpu_count()) as pool:
+        with Pool() as pool:
             for key, result in tqdm(pool.imap(Fitness.play_game_sync, all_game_args), total=len(all_game_args)):
                 original_key = key
                 value = result
@@ -106,33 +67,51 @@ class Fitness:
 
         return all_host_results, parasite_precalc_results
 
-    # @staticmethod
-    # def assign_fitnesses(host_population, host_game_results, penalize_size=False):
-    #     # TODO untested
-    #     parasite_defeat_count = defaultdict(set)
-    #     for result in host_game_results.items():
-    #         host, parasite, _ = result[0]
-    #         game_result = result[1]
-    #         if game_result > 0:
-    #             parasite_defeat_count[parasite].add(host)
-    #
-    #     max_nodes_count = max(o.genome.nodes_count for o in host_population.organisms)
-    #     worst_ratio = max(o.genome.connections_count / math.pow(o.genome.nodes_count, 2) for o in host_population.organisms)
-    #
-    #     for organism in host_population.organisms:
-    #         total_penalty = 0
-    #         if penalize_size:
-    #             nodes_ratio = organism.genome.nodes_count / max_nodes_count
-    #             conns_ratio = (organism.genome.connections_count / math.pow(organism.genome.nodes_count, 2)) / worst_ratio
-    #             total_penalty = ((nodes_ratio + conns_ratio) / 2.0) * Constants.fitness_penalty_factor
-    #
-    #         total_fitness_reward = 0
-    #         for result in filter(lambda r: r[0][0] == organism, host_game_results.items()):
-    #             parasite = result[0][1]
-    #             game_result = result[1]
-    #             unique_defeats = len(parasite_defeat_count[parasite]) if parasite in parasite_defeat_count else 0
-    #             reward_modifier = 1.0 / unique_defeats if unique_defeats > 0 else 2.0
-    #             total_fitness_reward += reward_modifier * Fitness.convert_game_result_to_fitness(game_result)
-    #
-    #         species_count = sum(1 for o in host_population.organisms if o.species_id == organism.species_id)
-    #         organism.fitness = (total_fitness_reward / species_count) - total_penalty
+    @staticmethod
+    def convert_game_result_to_fitness(result):
+        if result == 1:
+            return Constants.fitness_reward_win
+        elif result == 0:
+            return Constants.fitness_reward_draw
+        elif result == -1:
+            return Constants.fitness_reward_loss
+        else:
+            raise ValueError("Result out of range")
+
+    @staticmethod
+    def assign_fitnesses(host_population, host_game_results, penalize_size=False):
+        parasite_defeat_count = defaultdict(set)
+        for result in host_game_results.items():
+            host, parasite, _ = result[0]
+            game_result = result[1]
+            if game_result > 0:
+                parasite_defeat_count[parasite].add(host)
+
+        max_nodes_count = max(len(o.genome.nodes) for o in host_population.organisms)
+        worst_ratio = max(len(o.genome.connections) / math.pow(len(o.genome.nodes), 2) for o in host_population.organisms)
+
+        for organism in host_population.organisms:
+            total_penalty = 0
+            if penalize_size:
+                nodes_ratio = len(organism.genome.nodes) / max_nodes_count
+                conns_ratio = (len(organism.genome.connections) / math.pow(len(organism.genome.nodes), 2)) / worst_ratio
+                total_penalty = ((nodes_ratio + conns_ratio) / 2.0) * Constants.fitness_penalty_factor
+
+            organism_game_results = [x for x in host_game_results.items() if x[0][0] == organism.organism_id]
+            total_fitness_reward = 0
+            for result in organism_game_results:
+                parasite = result[0][1]
+                game_result = result[1]
+                unique_defeats = len(parasite_defeat_count[parasite]) if parasite in parasite_defeat_count else 0
+                reward_modifier = 1.0 / unique_defeats if unique_defeats > 0 else 2.0
+                total_fitness_reward += reward_modifier * Fitness.convert_game_result_to_fitness(game_result)
+
+            species_count = sum(1 for o in host_population.organisms if o.species_id == organism.species_id)
+            organism.fitness = (total_fitness_reward / species_count) - total_penalty
+
+        # Normalize fitnesses
+        fitnesses = [o.fitness for o in host_population.organisms]
+        for organism in host_population.organisms:
+            normalized_fitness = (organism.fitness - min(fitnesses)) / (max(fitnesses) - min(fitnesses))
+            scaled_normalized_fitness = normalized_fitness * 0.99
+            organism.fitness = scaled_normalized_fitness + 0.01

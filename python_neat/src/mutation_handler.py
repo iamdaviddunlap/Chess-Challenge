@@ -153,7 +153,7 @@ class Mutation:
 
         # Set the gater value of every connection that is gated by the node being removed to None
         for connection in genome.connections:
-            if connection.gater_node == node_to_remove:
+            if connection.gater_node is not None and connection.gater_node.node_id == node_to_remove.node_id:
                 connection.gater_node = None
 
         # Remove connections that previously went to/from the node to be removed

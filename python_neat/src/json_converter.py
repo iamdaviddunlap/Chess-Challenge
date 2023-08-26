@@ -74,7 +74,8 @@ def json_to_genome(genome_data):
 
 
 if __name__ == '__main__':
-    with open('saved_genomes/2023-08-26__03-31-47_generation_20/2411.json') as f:
+    org_id_to_load = 7853
+    with open(f'saved_genomes/2023-08-26__03-31-47_generation_20/{org_id_to_load}.json') as f:
         json_data = json.loads(f.read())
     loaded_genome = json_to_genome(json_data)
     x = 1

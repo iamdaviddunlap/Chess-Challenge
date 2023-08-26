@@ -25,16 +25,23 @@ class GameController:
 
         # Iterate over dataset
         for item in dataset:
-            inputs = item[:-1]
-            correct_output = item[-1]
+            # Separating inputs and correct outputs based on Constants.outputs_count
+            inputs = item[:-Constants.outputs_count]
+            correct_outputs = item[-Constants.outputs_count:]
+
             player.genome.reset_state()
-            player_output = player.genome.activate(inputs, **kwargs)
-            # player_output = random.random()  # TODO take this out!
-            player_output = player_output.item()  # Extract value from tensor
-            if np.isnan(player_output):
+
+            # Assuming player.genome.activate() returns an array of outputs of length Constants.outputs_count
+            player_outputs = player.genome.activate(inputs, **kwargs)
+
+            # Checking for NaNs in player_outputs
+            if any(np.isnan(output) for output in player_outputs):
                 raise Exception('Got nan as player output :(')
 
-            player_loss += abs(correct_output - player_output)
+            # Calculating the loss for each output and summing them
+            for correct_output, player_output in zip(correct_outputs, player_outputs):
+                player_output = player_output.item()  # Extract value from tensor if it's a tensor
+                player_loss += abs(correct_output - player_output)
 
         torch.cuda.empty_cache()
         return player_loss
@@ -43,7 +50,7 @@ class GameController:
     def play_supervised_learning(host_player, parasite_player, **kwargs):
         # dataset = DatasetHolder.XORDataset()
         # dataset = DatasetHolder.GaussianClassificationDataset()
-        dataset = DatasetManager().xor_dataset()
+        dataset = DatasetManager().concentric_circle_dataset()
 
         host_loss = GameController.play_labeled_dataset_single_player(host_player, dataset, **kwargs)
         parasite_loss = GameController.play_labeled_dataset_single_player(parasite_player, dataset, **kwargs)

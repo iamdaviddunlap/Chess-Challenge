@@ -4,6 +4,7 @@ from tqdm import tqdm
 import time
 import os
 import random
+import json
 from multiprocessing import Pool
 from itertools import combinations
 
@@ -21,7 +22,7 @@ from constants import Constants
 random.seed(Constants.random_seed)
 
 
-def prune_hall_of_fame(hall_of_fame):
+def prune_hall_of_fame(hall_of_fame, generation):
     print('++++++++++++++++++++++++++++')
     print('Pruning hall of fame...')
     # Step 1: Prepare arguments
@@ -52,12 +53,24 @@ def prune_hall_of_fame(hall_of_fame):
     # Keep only the top_n organisms
     pruned_hall_of_fame = sorted_organisms[:Constants.min_reduced_hof_size]
 
+    # Step 4: Create a folder to save pruned hall_of_fame genomes
+    current_time = time.strftime("%Y-%m-%d__%H-%M-%S")
+    folder_name = f"saved_genomes/{current_time}_generation_{generation}"
+    os.makedirs(folder_name, exist_ok=True)
+
+    # Step 5: Save each pruned organism's genome to a JSON file in the folder
+    for organism in pruned_hall_of_fame:
+        genome_data = genome_to_json(organism.genome)
+        json_file_path = os.path.join(folder_name, f"{organism.organism_id}.json")
+        with open(json_file_path, 'w') as json_file:
+            json.dump(genome_data, json_file, indent=4)
+
     print('++++++++++++++++++++++++++++')
     return pruned_hall_of_fame
 
 
 def main():
-    max_generations = 100
+    max_generations = 500
 
     # Initialization
     host_population = Population()
@@ -113,18 +126,9 @@ def main():
         hall_of_fame.append(overall_champ)
 
         if len(hall_of_fame) >= Constants.max_hof_size:
-            hall_of_fame = prune_hall_of_fame(hall_of_fame)
+            hall_of_fame = prune_hall_of_fame(hall_of_fame, generation)
 
         print(f"The {hof_champ_str} was added to HoF")
-
-        if host_loss <= 0.1 or parasite_loss <= 0.1:
-            x = 1
-
-        if host_loss <= 0.001 or parasite_loss <= 0.001:
-            x = 1
-
-        if generation == 999:
-            x = 1
 
         # Selection and breeding
         seeds_from_host = host_population.get_n_diff_species_champs(3)

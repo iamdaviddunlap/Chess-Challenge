@@ -1,70 +1,80 @@
 import json
-import torch.nn.functional as F
+from genome import NodeType, ACTIVATION_MAPPING, ActivationFunction, Genome
+from visualize import visualize_genome
 
 
 def genome_to_json(genome):
-    # Serialize nodes
-    nodes_json = [
-        {
-            "node_id": node.node_id,
-            "node_type": node.node_type.value,
-            "activation_function": node.activation_function.__name__,
-            "bias": node.bias
-        }
-        for node in genome.nodes
-    ]
-
-    # Serialize connections
-    connections_json = [
-        {
-            "connection_id": connection.connection_id,
-            "weight": connection.weight,
-            "input_node": connection.input_node.node_id,
-            "gater_node": connection.gater_node.node_id if connection.gater_node else None,
-            "output_node": connection.output_node.node_id
-        }
-        for connection in genome.connections
-    ]
-
-    # Combine nodes and connections into a single dictionary
-    genome_json = {
-        "nodes": nodes_json,
-        "connections": connections_json
+    # Create a dictionary to hold the serialized genome data
+    genome_data = {
+        'nodes': [],
+        'connections': []
     }
 
-    # Convert the dictionary to a JSON string
-    return json.dumps(genome_json)
+    reverse_mapping = {v: k for k, v in ACTIVATION_MAPPING.items()}
+
+    # Serialize nodes
+    for node in genome.nodes:
+        node_data = {
+            'node_id': node.node_id,
+            'node_type': node.node_type.value,
+            'activation_function': reverse_mapping[node.activation_function].value,
+            'bias': node.bias
+        }
+        genome_data['nodes'].append(node_data)
+
+    # Serialize connections
+    for connection in genome.connections:
+        connection_data = {
+            'connection_id': connection.connection_id,
+            'weight': connection.weight,
+            'input_node': connection.input_node.node_id,
+            'gater_node': connection.gater_node.node_id if connection.gater_node else None,
+            'output_node': connection.output_node.node_id,
+            'is_enabled': connection.is_enabled
+        }
+        genome_data['connections'].append(connection_data)
+
+    return genome_data
 
 
-def json_to_genome(json_str, empty_genome):
-    # Parse the JSON string into a dictionary
-    genome_data = json.loads(json_str)
+def json_to_genome(genome_data):
+    loaded_genome = Genome(fill_genome=False)
 
-    genome = empty_genome
+    # Create and add nodes to loaded_genome
+    for node_data in genome_data['nodes']:
+        node_type = NodeType(node_data['node_type'])
+        activation_function_name = node_data['activation_function']
+        activation_function = ACTIVATION_MAPPING[ActivationFunction(activation_function_name)]
+        bias = node_data['bias']
+        node_id = node_data['node_id']
+        loaded_genome.add_node(node_type, activation_function, bias, node_id=node_id)
 
-    # Deserialize nodes
-    for node_data in genome_data["nodes"]:
-        activation_function = getattr(F, node_data["activation_function"])
-        genome.add_node(
-            node_data["node_type"],
-            activation_function,
-            node_data["bias"],
-            node_id=node_data["node_id"]
-        )
+    # Create and add connections to loaded_genome
+    for connection_data in genome_data['connections']:
+        weight = connection_data['weight']
+        input_node_id = connection_data['input_node']
+        gater_node_id = connection_data['gater_node']
+        output_node_id = connection_data['output_node']
+        is_enabled = connection_data['is_enabled']
+        connection_id = connection_data['connection_id']
 
-    # Build a mapping of node IDs to Node objects
-    node_id_to_obj = {node.node_id: node for node in genome.nodes}
+        # Find the corresponding nodes based on their IDs
+        input_node = next(node for node in loaded_genome.nodes if node.node_id == input_node_id)
+        gater_node = next((node for node in loaded_genome.nodes if node.node_id == gater_node_id), None)
+        output_node = next(node for node in loaded_genome.nodes if node.node_id == output_node_id)
 
-    # Deserialize connections
-    for connection_data in genome_data["connections"]:
-        input_node = node_id_to_obj[connection_data["input_node"]]
-        gater_node = node_id_to_obj[connection_data["gater_node"]] if connection_data["gater_node"] else None
-        output_node = node_id_to_obj[connection_data["output_node"]]
-        genome.add_connection(
-            connection_data["weight"],
-            input_node,
-            gater_node,
-            output_node
-        )
+        # Add the connection
+        connection = loaded_genome.add_connection(weight, input_node, gater_node, output_node,
+                                                 connection_id=connection_id)
+        connection.is_enabled = is_enabled
 
-    return genome
+    # Initialize its phenotype
+    loaded_genome.create_phenotype()
+    return loaded_genome
+
+
+if __name__ == '__main__':
+    with open('saved_genomes/2023-08-26__03-31-47_generation_20/2411.json') as f:
+        json_data = json.loads(f.read())
+    loaded_genome = json_to_genome(json_data)
+    x = 1

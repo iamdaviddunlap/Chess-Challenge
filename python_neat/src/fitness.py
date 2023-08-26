@@ -3,6 +3,8 @@ from threading import Lock
 from concurrent.futures import ProcessPoolExecutor
 import time
 import math
+import numpy
+import numpy as np
 from tqdm import tqdm
 import os
 from multiprocessing import Pool
@@ -24,23 +26,25 @@ class Fitness:
         return key, result
 
     @staticmethod
-    def prepare_game_args(host, challengers, precalc_results=None):
+    def prepare_game_args(host, challengers, precalc_results=None, one_way=False):
         game_args = []
         for challenger in challengers:
+            if one_way and host.organism_id >= challenger.organism_id:
+                continue
             for i in range(2):
                 host_is_white = i == 0
                 game_args.append((host, challenger, host_is_white, precalc_results))
         return game_args
 
     @staticmethod
-    def evaluate_fitness_async(organisms, champions, challengers_for_parasites, precalc_results=None):
+    def evaluate_fitness_async(organisms, champions, challengers_for_parasites, precalc_results=None, one_way=False):
         all_game_args = []
         all_host_results = {}  # Dictionary to hold the host results
         parasite_precalc_results = {}  # Dictionary to hold the parasite precalculation results
         challengers_for_parasites_ids = [x.organism_id for x in challengers_for_parasites]
 
         for host in organisms:
-            game_args = Fitness.prepare_game_args(host, champions)
+            game_args = Fitness.prepare_game_args(host, champions, one_way=one_way)
             key_func = lambda x: (x[0].organism_id, x[1].organism_id, x[2])
             if precalc_results is not None:
                 non_dup_game_args = [x for x in game_args if key_func(x) not in precalc_results.keys()]
@@ -98,6 +102,7 @@ class Fitness:
                 total_penalty = ((nodes_ratio + conns_ratio) / 2.0) * Constants.fitness_penalty_factor
 
             organism_game_results = [x for x in host_game_results.items() if x[0][0] == organism.organism_id]
+            is_undefeated = len([x for x in organism_game_results if x[1] != 1]) == 0
             total_fitness_reward = 0
             for result in organism_game_results:
                 parasite = result[0][1]
@@ -107,11 +112,25 @@ class Fitness:
                 total_fitness_reward += reward_modifier * Fitness.convert_game_result_to_fitness(game_result)
 
             species_count = sum(1 for o in host_population.organisms if o.species_id == organism.species_id)
-            organism.fitness = (total_fitness_reward / species_count) - total_penalty
+            species_count_log = np.log(species_count+1)
+            if is_undefeated:
+                undefeated_special_mod = 2.0
+                total_fitness_reward *= undefeated_special_mod
+                organism.fitness = (total_fitness_reward / (species_count_log / undefeated_special_mod)) - (total_penalty / undefeated_special_mod)
+            else:
+                organism.fitness = (total_fitness_reward / species_count_log) - total_penalty
 
         # Normalize fitnesses
-        fitnesses = [o.fitness for o in host_population.organisms]
+        min_fitness = min(o.fitness for o in host_population.organisms)
+        max_fitness = max(o.fitness for o in host_population.organisms)
+        range_fitness = max(max_fitness - min_fitness, 0.001)
         for organism in host_population.organisms:
-            normalized_fitness = (organism.fitness - min(fitnesses)) / (max(fitnesses) - min(fitnesses))
-            scaled_normalized_fitness = normalized_fitness * 0.99
-            organism.fitness = scaled_normalized_fitness + 0.01
+            # Normalizing between 0 and 1
+            normalized_fitness = (organism.fitness - min_fitness) / range_fitness
+            # Scaling and translating to [0.01, 1.0]
+            scaled_normalized_fitness = normalized_fitness * 0.99 + 0.01
+            # Check for NaN
+            if np.isnan(scaled_normalized_fitness):
+                scaled_normalized_fitness = 0.00
+
+            organism.fitness = scaled_normalized_fitness

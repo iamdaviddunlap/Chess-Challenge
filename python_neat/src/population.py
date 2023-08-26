@@ -1,4 +1,5 @@
 import random
+import statistics
 
 from constants import Constants
 from genome import Genome
@@ -133,9 +134,16 @@ class Population:
         super_champ = self.get_superchamp()
 
         # Create special clones from super champ
-        for i in range(Constants.superchamp_offspring):
+        pop_fitnesses = [o.fitness for o in self.organisms]
+        super_champ_z_score = (super_champ.fitness - statistics.mean(pop_fitnesses)) / statistics.stdev(pop_fitnesses)
+        print(f"super_champ_z_score: {super_champ_z_score}")
+        if super_champ_z_score >= Constants.killer_superchamp_z_score_req:
+            super_champ_offspring = int(Constants.population_size * Constants.killer_superchamp_percent)
+        else:
+            super_champ_offspring = Constants.superchamp_offspring
+        for i in range(super_champ_offspring):
             new_superchamp_genome = super_champ.genome.clone()
-            Mutation.mutate_weights(new_superchamp_genome)
+            Mutation.mutate_weights(new_superchamp_genome, weight_perturb_value_mod=0.4)
             new_superchamp_child = Organism(new_superchamp_genome)
             new_organisms.append(new_superchamp_child)
 

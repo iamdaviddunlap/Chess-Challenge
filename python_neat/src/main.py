@@ -3,7 +3,9 @@ from collections import defaultdict
 from tqdm import tqdm
 import time
 import os
+import random
 from multiprocessing import Pool
+from itertools import combinations
 
 from visualize import visualize_genome
 from json_converter import genome_to_json
@@ -14,6 +16,44 @@ from population import Population
 from fitness import Fitness
 from dataset_manager import DatasetManager
 from game_controller import GameController
+from constants import Constants
+
+random.seed(Constants.random_seed)
+
+
+def prune_hall_of_fame(hall_of_fame):
+    print('++++++++++++++++++++++++++++')
+    print('Pruning hall of fame...')
+    # Step 1: Prepare arguments
+    organisms = hall_of_fame
+    champions = hall_of_fame
+    challengers_for_parasites = []  # Empty because we're only interested in hall_of_fame vs. hall_of_fame
+    precalc_results = None  # No precalculated results
+
+    # Step 2: Call evaluate_fitness_async
+    all_results, _ = Fitness.evaluate_fitness_async(
+        organisms=organisms,
+        champions=champions,
+        challengers_for_parasites=challengers_for_parasites,
+        precalc_results=precalc_results,
+        one_way=True)
+
+    # Step 3: Analyze results to get top_n organisms
+    # Initialize a dictionary to hold the sum of game results for each organism
+    sum_results = {organism.organism_id: 0 for organism in hall_of_fame}
+
+    for (org1_id, org2_id, _), result in all_results.items():
+        sum_results[org1_id] += result
+        sum_results[org2_id] -= result  # Assuming that a positive result is good for org1 and bad for org2
+
+    # Sort the organisms by their summed game results
+    sorted_organisms = sorted(hall_of_fame, key=lambda x: sum_results[x.organism_id], reverse=True)
+
+    # Keep only the top_n organisms
+    pruned_hall_of_fame = sorted_organisms[:Constants.min_reduced_hof_size]
+
+    print('++++++++++++++++++++++++++++')
+    return pruned_hall_of_fame
 
 
 def main():
@@ -28,10 +68,6 @@ def main():
     # Main evolutionary loop
     for generation in range(1, max_generations+1):
         gen_start_time = time.time()
-
-        parasite_precalc_results = defaultdict(int)
-        all_host_results = defaultdict(int)
-        all_parasite_results = defaultdict(int)
 
         challengers_for_hosts = parasite_population.select_challengers(hall_of_fame)
         challengers_for_parasites = host_population.select_challengers(hall_of_fame)
@@ -55,18 +91,31 @@ def main():
         # Get some metrics about how things are going
         host_champ = host_population.get_superchamp()
         parasite_champ = parasite_population.get_superchamp()
+
+        # Calculate exact loss (NOTE: this cannot be done without labeled dataset)
         dataset = DatasetManager().xor_dataset()
         host_loss = GameController.play_labeled_dataset_single_player(host_champ, dataset)
         parasite_loss = GameController.play_labeled_dataset_single_player(parasite_champ, dataset)
-
-        overall_champ = host_champ if host_loss < parasite_loss else parasite_champ
-        overall_champ_guess_based_on_fitness = host_champ if host_champ.fitness > parasite_champ.fitness else parasite_champ
-        fitter_champ_str = "host" if overall_champ_guess_based_on_fitness == host_champ else "parasite"
-        hall_of_fame.append(overall_champ)
-
         print(f"Generation {generation}: host champion loss: {host_loss}")
         print(f"Generation {generation}: parasite champion loss: {parasite_loss}")
-        print(f"The {fitter_champ_str} is fitter")
+
+        host_white_result = GameController.play_game(host_champ, parasite_champ, host_is_white=True)
+        host_black_result = GameController.play_game(host_champ, parasite_champ, host_is_white=False)
+        champ_result_sum = host_white_result + host_black_result
+        if champ_result_sum > 0:
+            overall_champ = host_champ
+        elif champ_result_sum < 0:
+            overall_champ = parasite_champ
+        else:
+            overall_champ = host_champ if random.random() < 0.5 else parasite_champ
+
+        hof_champ_str = "host" if overall_champ == host_champ else "parasite"
+        hall_of_fame.append(overall_champ)
+
+        if len(hall_of_fame) >= Constants.max_hof_size:
+            hall_of_fame = prune_hall_of_fame(hall_of_fame)
+
+        print(f"The {hof_champ_str} was added to HoF")
 
         if host_loss <= 0.1 or parasite_loss <= 0.1:
             x = 1

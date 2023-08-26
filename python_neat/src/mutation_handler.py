@@ -36,10 +36,10 @@ class Mutation:
                 Mutation.mutate_activation_function(genome)
 
     @staticmethod
-    def mutate_weights(genome):
+    def mutate_weights(genome, weight_perturb_value_mod=1.0):
         for connection in genome.connections:
             if random.random() < Constants.weight_perturb_chance:
-                perturb_amount = random.uniform(-1, 1) * Constants.weight_perturb_value
+                perturb_amount = random.uniform(-1, 1) * Constants.weight_perturb_value * weight_perturb_value_mod
                 new_weight = connection.weight + perturb_amount
                 connection.weight = min(max(new_weight, Constants.min_val), Constants.max_val)
                 connection.weight = round(connection.weight, 3)

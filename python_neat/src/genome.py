@@ -276,7 +276,7 @@ class Genome:
         self.activations[inputs_pheno_ids] = input_activations_tensor
 
         # Iterate Through Time Steps
-        for _ in range(max_iterations):
+        for i in range(max_iterations):
             new_activations = self.activations.clone()
             for node_id in self.activation_order:
                 phen_id = self.node_geno_to_pheno[node_id]
@@ -287,6 +287,7 @@ class Genome:
                     self.connection_matrix[:, phen_id, 1][gates_mask].long()]
                 incoming_activation = torch.sum(incoming_activations)
                 new_activation = new_activations[phen_id] + incoming_activation + node.bias
+                new_activation = torch.clamp(new_activation, min=-1e12, max=1e12)
                 # Apply activation function
                 new_activations[phen_id] = node.activation_function(new_activation)
 

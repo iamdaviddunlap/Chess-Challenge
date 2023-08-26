@@ -1,5 +1,6 @@
 import random
 import torch
+import numpy as np
 
 from constants import Constants
 from dataset_manager import DatasetManager
@@ -30,6 +31,8 @@ class GameController:
             player_output = player.genome.activate(inputs, **kwargs)
             # player_output = random.random()  # TODO take this out!
             player_output = player_output.item()  # Extract value from tensor
+            if np.isnan(player_output):
+                raise Exception('Got nan as player output :(')
 
             player_loss += abs(correct_output - player_output)
 

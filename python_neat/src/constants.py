@@ -11,6 +11,12 @@ class Constants:
     num_hall_of_fame_parasites = 8
     num_champion_parasites = 4
 
+    # HoF cleanup settings
+    # max_hof_size = 75
+    # min_reduced_hof_size = 25
+    max_hof_size = 20
+    min_reduced_hof_size = 10
+
     # Mutation Settings
     mutate_weights_prob = 0.6
     mutate_biases_prob = 0.6
@@ -48,6 +54,8 @@ class Constants:
 
     # Breeding Settings
     superchamp_offspring = 3
+    killer_superchamp_z_score_req = 5.0
+    killer_superchamp_percent = 0.4
     mutate_only_prob = 0.25
     mate_only_prob = 0.2
     cross_species_mating_prob = 0.05

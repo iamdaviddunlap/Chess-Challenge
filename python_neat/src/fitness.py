@@ -7,7 +7,7 @@ import numpy
 import numpy as np
 from tqdm import tqdm
 import os
-from multiprocessing import Pool
+from torch.multiprocessing import Pool
 
 from constants import Constants
 from game_controller import GameController

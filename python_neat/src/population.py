@@ -145,12 +145,14 @@ class Population:
             new_superchamp_genome = super_champ.genome.clone()
             Mutation.mutate_weights(new_superchamp_genome, weight_perturb_value_mod=0.4)
             new_superchamp_child = Organism(new_superchamp_genome)
+            new_superchamp_child.fitness = super_champ.fitness
             new_organisms.append(new_superchamp_child)
 
         # Directly clone the species champions
         for champ in species_champs:
             cloned_genome = champ.genome.clone()
             new_organism = Organism(cloned_genome)
+            new_organism.fitness = champ.fitness
             new_organisms.append(new_organism)
 
         # Reproduction phase

@@ -75,10 +75,11 @@ def json_to_genome(genome_data):
 
 if __name__ == '__main__':
     from dataset_manager import DatasetManager
-    org_id_to_load = 2411
-    with open(f'saved_genomes/xor_solutions/{org_id_to_load}.json') as f:
+    org_id_to_load = 7998
+    with open(f'saved_genomes/xor_solutions_2/{org_id_to_load}.json') as f:
         json_data = json.loads(f.read())
     loaded_genome = json_to_genome(json_data)
+    visualize_genome(loaded_genome)
 
     dataset = DatasetManager().xor_dataset()
     for item in dataset:
@@ -90,5 +91,5 @@ if __name__ == '__main__':
 
         # Assuming player.genome.activate() returns an array of outputs of length Constants.outputs_count
         player_outputs = loaded_genome.activate(inputs)
-        print(f"inputs: {inputs}, outputs: {player_outputs}")
+        print(f"inputs: {inputs}, outputs: {player_outputs}, correct outputs: {correct_outputs}")
     x = 1

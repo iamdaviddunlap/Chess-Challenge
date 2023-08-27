@@ -11,8 +11,8 @@ random.seed(Constants.random_seed)
 class Organism:
     def __init__(self, genome, organism_id=None):
         self.genome = genome
-        self.fitness = random.uniform(0, 100)  # TODO should change this back to -1
-        self.species_id = random.randrange(1, 5)  # TODO should change this back to -1
+        self.fitness = -1
+        self.species_id = -1
         if organism_id is not None:
             self.organism_id = organism_id
         else:
@@ -23,7 +23,9 @@ class Organism:
             # Asexual reproduction
             offspring_genome = self.genome.clone()
             Mutation.mutate_genome(offspring_genome)
-            return Organism(offspring_genome)
+            new_organism = Organism(offspring_genome)
+            new_organism.fitness = self.fitness
+            return new_organism
 
         # Sexual reproduction
         if random.random() < Constants.mate_avg_genes_prob:
@@ -34,7 +36,10 @@ class Organism:
             selection_func = lambda p1, p2: p1 if random.random() < 0.5 else p2
 
         offspring_genome = self._mate_multipoint(random, co_parent, selection_func)
-        return Organism(offspring_genome)
+        more_fit_parent = self if self.fitness > co_parent.fitness else co_parent
+        new_organism = Organism(offspring_genome)
+        new_organism.fitness = more_fit_parent.fitness
+        return new_organism
 
     def _mate_multipoint(self, random, co_parent, selection_func):
         offspring_genome = Genome(fill_genome=False)

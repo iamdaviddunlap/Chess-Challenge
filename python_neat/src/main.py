@@ -106,7 +106,7 @@ def main():
         parasite_champ = parasite_population.get_superchamp()
 
         # Calculate exact loss (NOTE: this cannot be done without labeled dataset)
-        dataset = DatasetManager().concentric_circle_dataset()
+        dataset = DatasetManager().xor_dataset()
         host_loss = GameController.play_labeled_dataset_single_player(host_champ, dataset)
         parasite_loss = GameController.play_labeled_dataset_single_player(parasite_champ, dataset)
         print(f"Generation {generation}: host champion loss: {host_loss}")

@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 import matplotlib.pyplot as plt
 
 
@@ -12,10 +13,10 @@ class DatasetManager:
             cls._instance = super(DatasetManager, cls).__new__(cls)
         return cls._instance
 
-    def xor_dataset(self):
+    def xor_dataset(self, device="cpu"):
         if self._xor_dataset is not None:
             np.random.shuffle(self._xor_dataset)
-            return self._xor_dataset
+            return torch.tensor(self._xor_dataset).to(device).float()
 
         self._xor_dataset = np.array([
             [0, 0, 1, 0],
@@ -25,12 +26,12 @@ class DatasetManager:
         ])
 
         np.random.shuffle(self._xor_dataset)
-        return self._xor_dataset
+        return torch.tensor(self._xor_dataset).to(device).float()
 
-    def concentric_circle_dataset(self, n_points=50, noise=0.1):
+    def concentric_circle_dataset(self, device="cpu", n_points=50, noise=0.1):
         if self._concentric_circle_dataset is not None:
             np.random.shuffle(self._concentric_circle_dataset)
-            return self._concentric_circle_dataset
+            return torch.tensor(self._concentric_circle_dataset).to(device).float()
 
         theta = np.linspace(0, 2 * np.pi, n_points)
         r_inner = 1
@@ -60,7 +61,7 @@ class DatasetManager:
         self._concentric_circle_dataset = np.column_stack((X, y))
         np.random.shuffle(self._concentric_circle_dataset)
 
-        return self._concentric_circle_dataset
+        return torch.tensor(self._concentric_circle_dataset).to(device).float()
 
 
 def plot_concentric_circle_dataset(dataset):

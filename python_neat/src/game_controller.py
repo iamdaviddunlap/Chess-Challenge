@@ -80,15 +80,14 @@ class GameController:
         return player_loss
 
     @staticmethod
-    def play_supervised_learning(host_player, parasite_player, gpu_chance=0.005, **kwargs):
+    def play_supervised_learning(host_player, parasite_player, gpu_chance=0.0, **kwargs):
         # dataset = DatasetHolder.XORDataset()
         # dataset = DatasetHolder.GaussianClassificationDataset()
-        dataset = DatasetManager().xor_dataset()
 
         device = "cuda" if random.random() < gpu_chance else "cpu"
         host_player.to_device(device)
         parasite_player.to_device(device)
-        dataset = torch.tensor(dataset).to(device).float()
+        dataset = DatasetManager().xor_dataset(device=device)
 
         host_loss = GameController.play_labeled_dataset_single_player(host_player, dataset, **kwargs)
         parasite_loss = GameController.play_labeled_dataset_single_player(parasite_player, dataset, **kwargs)

@@ -74,8 +74,21 @@ def json_to_genome(genome_data):
 
 
 if __name__ == '__main__':
-    org_id_to_load = 7853
-    with open(f'saved_genomes/2023-08-26__03-31-47_generation_20/{org_id_to_load}.json') as f:
+    from dataset_manager import DatasetManager
+    org_id_to_load = 2411
+    with open(f'saved_genomes/xor_solutions/{org_id_to_load}.json') as f:
         json_data = json.loads(f.read())
     loaded_genome = json_to_genome(json_data)
+
+    dataset = DatasetManager().xor_dataset()
+    for item in dataset:
+        # Separating inputs and correct outputs based on Constants.outputs_count
+        inputs = item[:-1]
+        correct_outputs = item[-1:].cpu()
+
+        loaded_genome.reset_state()
+
+        # Assuming player.genome.activate() returns an array of outputs of length Constants.outputs_count
+        player_outputs = loaded_genome.activate(inputs)
+        print(f"inputs: {inputs}, outputs: {player_outputs}")
     x = 1

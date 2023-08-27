@@ -132,8 +132,8 @@ class Genome:
                         self.node_geno_to_pheno[input_node_id], self.node_geno_to_pheno[output_node_id], 1] = \
                         self.node_geno_to_pheno[connection.gater_node.node_id]
 
-        self.inputs_mask = torch.tensor([node.node_type == NodeType.INPUT for node in self.nodes])
-        self.outputs_mask = torch.tensor([node.node_type == NodeType.OUTPUT for node in self.nodes])
+        self.inputs_mask = torch.tensor([self.node_geno_to_pheno[node.node_id] for node in self.nodes if node.node_type == NodeType.INPUT])
+        self.outputs_mask = torch.tensor([self.node_geno_to_pheno[node.node_id] for node in self.nodes if node.node_type == NodeType.OUTPUT])
         self.gates_mask = ~torch.isnan(self.connection_matrix[:, :, 1])
         self.activations = torch.zeros(len(self.nodes))
 

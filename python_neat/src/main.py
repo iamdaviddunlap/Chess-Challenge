@@ -22,6 +22,21 @@ from constants import Constants
 random.seed(Constants.random_seed)
 
 
+def save_hall_of_fame(hall_of_fame, generation, pruned=False):
+    current_time = time.strftime("%Y-%m-%d__%H-%M-%S")
+    folder_name = f"saved_genomes/{current_time}_generation_{generation}"
+    if pruned:
+        folder_name += "_pruned"
+    os.makedirs(folder_name, exist_ok=True)
+
+    # Step 5: Save each pruned organism's genome to a JSON file in the folder
+    for organism in hall_of_fame:
+        genome_data = genome_to_json(organism.genome)
+        json_file_path = os.path.join(folder_name, f"{organism.organism_id}.json")
+        with open(json_file_path, 'w') as json_file:
+            json.dump(genome_data, json_file, indent=4)
+
+
 def prune_hall_of_fame(hall_of_fame, generation):
     print('++++++++++++++++++++++++++++')
     print('Pruning hall of fame...')
@@ -53,17 +68,7 @@ def prune_hall_of_fame(hall_of_fame, generation):
     # Keep only the top_n organisms
     pruned_hall_of_fame = sorted_organisms[:Constants.min_reduced_hof_size]
 
-    # Step 4: Create a folder to save pruned hall_of_fame genomes
-    current_time = time.strftime("%Y-%m-%d__%H-%M-%S")
-    folder_name = f"saved_genomes/{current_time}_generation_{generation}"
-    os.makedirs(folder_name, exist_ok=True)
-
-    # Step 5: Save each pruned organism's genome to a JSON file in the folder
-    for organism in pruned_hall_of_fame:
-        genome_data = genome_to_json(organism.genome)
-        json_file_path = os.path.join(folder_name, f"{organism.organism_id}.json")
-        with open(json_file_path, 'w') as json_file:
-            json.dump(genome_data, json_file, indent=4)
+    save_hall_of_fame(pruned_hall_of_fame, generation, pruned=True)
 
     print('++++++++++++++++++++++++++++')
     return pruned_hall_of_fame
@@ -106,11 +111,11 @@ def main():
         parasite_champ = parasite_population.get_superchamp()
 
         # Calculate exact loss (NOTE: this cannot be done without labeled dataset)
-        dataset = DatasetManager().xor_dataset()
-        host_loss = GameController.play_labeled_dataset_single_player(host_champ, dataset)
-        parasite_loss = GameController.play_labeled_dataset_single_player(parasite_champ, dataset)
-        print(f"Generation {generation}: host champion loss: {host_loss}")
-        print(f"Generation {generation}: parasite champion loss: {parasite_loss}")
+        # dataset = DatasetManager().concentric_circle_dataset()
+        # host_loss = GameController.play_labeled_dataset_single_player(host_champ, dataset)
+        # parasite_loss = GameController.play_labeled_dataset_single_player(parasite_champ, dataset)
+        # print(f"Generation {generation}: host champion loss: {host_loss}")
+        # print(f"Generation {generation}: parasite champion loss: {parasite_loss}")
 
         host_white_result = GameController.play_game(host_champ, parasite_champ, host_is_white=True)
         host_black_result = GameController.play_game(host_champ, parasite_champ, host_is_white=False)
@@ -124,11 +129,12 @@ def main():
 
         hof_champ_str = "host" if overall_champ == host_champ else "parasite"
         hall_of_fame.append(overall_champ)
+        print(f"The {hof_champ_str} was added to HoF")
 
         if len(hall_of_fame) >= Constants.max_hof_size:
             hall_of_fame = prune_hall_of_fame(hall_of_fame, generation)
-
-        print(f"The {hof_champ_str} was added to HoF")
+        elif generation % 1 == 0:
+            save_hall_of_fame(hall_of_fame, generation)
 
         # Selection and breeding
         seeds_from_host = host_population.get_n_diff_species_champs(3)

@@ -17,8 +17,7 @@ class Population:
         self._species_compat_thresh = Constants.species_compat_thresh_initial
         self.organisms = []
         self.species_reps = []
-        # self.species_ids = []
-        self.species_ids = [1, 2, 3, 4]  # TODO init as empty
+        self.species_ids = []
 
         for i in range(Constants.population_size):
             genome = Genome()

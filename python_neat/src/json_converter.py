@@ -75,17 +75,20 @@ def json_to_genome(genome_data):
 
 if __name__ == '__main__':
     from dataset_manager import DatasetManager
-    org_id_to_load = 7998
-    with open(f'saved_genomes/xor_solutions_2/{org_id_to_load}.json') as f:
+    from constants import Constants
+    # org_id_to_load = 7998
+    # with open(f'saved_genomes/xor_solutions_2/{org_id_to_load}.json') as f:
+    org_id_to_load = 4125
+    with open(f'saved_genomes/2023-08-27__15-10-31_generation_21/{org_id_to_load}.json') as f:
         json_data = json.loads(f.read())
     loaded_genome = json_to_genome(json_data)
     visualize_genome(loaded_genome)
 
-    dataset = DatasetManager().xor_dataset()
+    dataset = DatasetManager().concentric_circle_dataset()
     for item in dataset:
         # Separating inputs and correct outputs based on Constants.outputs_count
-        inputs = item[:-1]
-        correct_outputs = item[-1:].cpu()
+        inputs = item[:-Constants.outputs_count]
+        correct_outputs = item[-Constants.outputs_count:].cpu()
 
         loaded_genome.reset_state()
 

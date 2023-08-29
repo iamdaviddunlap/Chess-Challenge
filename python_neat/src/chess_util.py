@@ -1,6 +1,10 @@
 import chess
 import random
 
+BOARD_ENCODING_LENGTH = 256
+MOVE_ENCODING_LENGTH = 28
+TOTAL_ENCODING_LENGTH = BOARD_ENCODING_LENGTH + MOVE_ENCODING_LENGTH
+
 
 def board_to_binary(board):
     binary_representation_str = ''

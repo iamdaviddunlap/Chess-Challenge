@@ -1,5 +1,7 @@
 import numpy as np
+import pandas as pd
 import torch
+import os
 import matplotlib.pyplot as plt
 
 
@@ -7,6 +9,7 @@ class DatasetManager:
     _instance = None
     _xor_dataset = None
     _concentric_circle_dataset = None
+    _chess_puzzles_dataset = None
 
     def __new__(cls):
         if cls._instance is None:
@@ -62,6 +65,38 @@ class DatasetManager:
         np.random.shuffle(self._concentric_circle_dataset)
 
         return torch.tensor(self._concentric_circle_dataset).to(device).float()
+
+    def get_chess_puzzle_dataset(self):
+        raw_dataset_filename = 'datasets/lichess_db_puzzle_raw.csv'
+        one_mil_dataset_filename = 'datasets/lichess_db_puzzle_1M.csv'
+
+        if self._chess_puzzles_dataset is not None:
+            shuffled_df = self._chess_puzzles_dataset.sample(frac=1)
+            return shuffled_df
+        if os.path.exists(one_mil_dataset_filename):
+            df = pd.read_csv(one_mil_dataset_filename)
+            self._chess_puzzles_dataset = df[['FEN', 'Moves', 'Rating_mod']]
+            shuffled_df = self._chess_puzzles_dataset.sample(frac=1)
+            return shuffled_df
+        # Load raw lichess puzzles dataset and take the best 1M puzzles
+        target_dataset_size = 1000000  # 1 million
+        raw_dataset = pd.read_csv(raw_dataset_filename)
+        dataset = raw_dataset[raw_dataset['Popularity'] >= 90][raw_dataset['NbPlays'] > 750][raw_dataset['RatingDeviation'] < 100]
+        dataset = dataset[:target_dataset_size]
+
+        # Calculate a modifier for the rating. First we find the z-score for each rating. Then we scale that z-score to
+        # fall between 1 and 2 to get the final rating modifier
+        dataset['Rating_mod'] = (dataset['Rating'] - np.mean(dataset['Rating'])) / np.std(dataset['Rating'])
+        min_target = 1
+        max_target = 2
+        dataset['Rating_mod'] = min_target + ((dataset['Rating_mod'] - dataset['Rating_mod'].min()) / (
+                dataset['Rating_mod'].max() - dataset['Rating_mod'].min())) * (max_target - min_target)
+        dataset = dataset[['PuzzleId', 'FEN', 'Moves', 'Rating_mod']]
+        dataset.to_csv(one_mil_dataset_filename, index=False)
+
+        self._chess_puzzles_dataset = dataset[['FEN', 'Moves', 'Rating_mod']]
+        shuffled_df = self._chess_puzzles_dataset.sample(frac=1)
+        return shuffled_df
 
 
 def plot_concentric_circle_dataset(dataset):

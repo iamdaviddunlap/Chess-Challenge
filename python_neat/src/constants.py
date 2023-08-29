@@ -1,11 +1,14 @@
 class Constants:
     # General Parameters
     population_size = 200
-    inputs_count = 3
+    inputs_count = 284
     outputs_count = 1
     min_val = -99.999
     max_val = 99.999
     random_seed = 1
+
+    # Chess Parameters
+    num_puzzles_per_game = 500
 
     # Parasites Settings
     num_hall_of_fame_parasites = 8

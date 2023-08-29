@@ -54,7 +54,7 @@ class Fitness:
                 all_host_results = {**all_host_results, **precalced}
             all_game_args.extend(game_args)
 
-        with Pool(processes=1) as pool:
+        with Pool() as pool:
             for key, result in tqdm(pool.imap(Fitness.play_game_sync, all_game_args), total=len(all_game_args)):
                 original_key = key
                 value = result

@@ -37,6 +37,20 @@ def save_hall_of_fame(hall_of_fame, generation, pruned=False):
             json.dump(genome_data, json_file, indent=4)
 
 
+def save_population(population, generation, is_host):
+    current_time = time.strftime("%Y-%m-%d__%H-%M-%S")
+    population_name = "host" if is_host else "parasite"
+    folder_name = f"saved_genomes/populations/{population_name}_gen{generation}_{current_time}"
+    os.makedirs(folder_name, exist_ok=True)
+
+    # Step 5: Save each pruned organism's genome to a JSON file in the folder
+    for organism in population.organisms:
+        genome_data = genome_to_json(organism.genome)
+        json_file_path = os.path.join(folder_name, f"{organism.organism_id}.json")
+        with open(json_file_path, 'w') as json_file:
+            json.dump(genome_data, json_file, indent=4)
+
+
 def prune_hall_of_fame(hall_of_fame, generation):
     print('++++++++++++++++++++++++++++')
     print('Pruning hall of fame...')
@@ -131,11 +145,6 @@ def main():
         hall_of_fame.append(overall_champ)
         print(f"The {hof_champ_str} was added to HoF")
 
-        if len(hall_of_fame) >= Constants.max_hof_size:
-            hall_of_fame = prune_hall_of_fame(hall_of_fame, generation)
-        elif generation % 1 == 0:
-            save_hall_of_fame(hall_of_fame, generation)
-
         # Selection and breeding
         seeds_from_host = host_population.get_n_diff_species_champs(3)
         seeds_from_parasite = parasite_population.get_n_diff_species_champs(3)
@@ -147,6 +156,13 @@ def main():
         # Form species in both populations
         host_population.speciate()
         parasite_population.speciate()
+
+        if len(hall_of_fame) >= Constants.max_hof_size:
+            hall_of_fame = prune_hall_of_fame(hall_of_fame, generation)
+        elif generation % 1 == 0:
+            save_hall_of_fame(hall_of_fame, generation)
+            save_population(host_population, generation+1, is_host=True)
+            save_population(parasite_population, generation+1, is_host=False)
 
         print(f'Processed generation {generation} in {round(time.time() - gen_start_time, 3)}s')
         print("----------------------------")

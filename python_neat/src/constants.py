@@ -8,7 +8,7 @@ class Constants:
     random_seed = 1
 
     # Chess Parameters
-    num_puzzles_per_game = 2
+    num_puzzles_per_game = 100
 
     # Parasites Settings
     num_hall_of_fame_parasites = 8

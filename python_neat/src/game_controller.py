@@ -2,9 +2,11 @@ import random
 import torch
 import numpy as np
 import chess
+import tqdm
+import logging
 from torch.profiler import profile, record_function, ProfilerActivity
 
-from chess_util import board_to_binary, move_to_binary, MOVE_ENCODING_LENGTH
+from chess_util import board_to_binary, move_to_binary, MOVE_ENCODING_LENGTH, STARTING_POSITION_INPUT_TENSOR
 from constants import Constants
 from dataset_manager import DatasetManager
 
@@ -193,3 +195,72 @@ class GameController:
         if player_1_total_score > player_2_total_score:
             return 1
         return -1
+
+
+    @staticmethod
+    def get_chess_puzzles_inputs(device):
+        # Get the (newly shuffled) puzzles dataset and clip to the number of puzzles we're evaluating per game
+        puzzles_dataset = DatasetManager().get_chess_puzzle_dataset()
+        puzzles_dataset = puzzles_dataset[:Constants.num_puzzles_per_game]
+
+        all_puzzle_inputs = []
+        for _, puzzle in puzzles_dataset.iterrows():
+            # Extract the puzzle info from the dataframe row
+            fen = puzzle['FEN']
+            moves = puzzle['Moves'].split(' ')
+            difficulty = puzzle['Rating_mod']
+
+            board = chess.Board(fen=fen)
+
+            puzzle_inputs = []
+
+            is_player_turn = False
+            for i in range(len(moves)):
+                if is_player_turn:
+                    correct_move = moves[i]
+                    binary_board_string = board_to_binary(board)
+
+                    # Create the input tensors for all legal moves
+                    all_moves_input_tensors = []
+                    legal_moves_lst = [x for x in board.legal_moves]
+                    for potential_move in legal_moves_lst:
+                        model_input_str = binary_board_string + move_to_binary(potential_move, board)
+                        model_input_tensor = torch.tensor([int(c) for c in model_input_str], dtype=torch.float).to(device)
+                        all_moves_input_tensors.append(model_input_tensor)
+                    correct_move_idx = [x.uci() for x in legal_moves_lst].index(correct_move)
+                    puzzle_inputs.append((all_moves_input_tensors, correct_move_idx))
+
+                # Apply the move to the board and switch if it is the players' turn or not
+                board.push_uci(moves[i])
+                is_player_turn = not is_player_turn
+
+            all_puzzle_inputs.append((puzzle_inputs, difficulty))
+
+        return all_puzzle_inputs
+
+    @staticmethod
+    def play_chess_puzzles_singleplayer(args, device="cpu"):
+        player, chess_puzzles_inputs = args
+        organism_id = player.organism_id
+        player = player.genome
+        player.reset_state()
+        player.to_device(device)
+        total_score = 0
+        for puzzle_tup in chess_puzzles_inputs:
+            puzzle_lst, difficulty = puzzle_tup
+            player.activate(STARTING_POSITION_INPUT_TENSOR.to(device))
+            total_correct_moves = 0
+            for moves_tuple in puzzle_lst:
+                moves_input_tensors, correct_idx = moves_tuple
+                best_move_idx, best_internal_activations = GameController._get_player_best_move(
+                    player, moves_input_tensors, apply_best_activation=False)
+                if best_move_idx == correct_idx:
+                    total_correct_moves += 1
+                    player.activations = best_internal_activations
+                else:
+                    break
+            player.reset_state()
+            target_correct_moves = float(len(puzzle_tup[0]))
+            player_ratio = total_correct_moves / target_correct_moves
+            total_score += player_ratio * difficulty
+        return organism_id, total_score

@@ -102,8 +102,10 @@ def load_population(population_folder):
 
 
 def main():
-    host_population_folder = 'saved_genomes/populations/host_gen2_2023-08-29__12-46-08'
-    parasite_population_folder = 'saved_genomes/populations/parasite_gen2_2023-08-29__12-46-11'
+    # host_population_folder = 'saved_genomes/populations/host_gen2_2023-08-29__12-46-08'
+    # parasite_population_folder = 'saved_genomes/populations/parasite_gen2_2023-08-29__12-46-11'
+    host_population_folder = None
+    parasite_population_folder = None
     max_generations = 500
 
     # Initialization

@@ -25,49 +25,100 @@ class Fitness:
             result = GameController.play_game(host, challenger, host_is_white)
         return key, result
 
+    # @staticmethod
+    # def prepare_game_args(host, challengers, precalc_results=None, one_way=False):
+    #     game_args = []
+    #     for challenger in challengers:
+    #         if one_way and host.organism_id >= challenger.organism_id:
+    #             continue
+    #         for i in range(2):
+    #             host_is_white = i == 0
+    #             game_args.append((host, challenger, host_is_white, precalc_results))
+    #     return game_args
+
+    # @staticmethod
+    # def evaluate_fitness_async(organisms, champions, challengers_for_parasites, precalc_results=None, one_way=False):
+    #     all_game_args = []
+    #     all_host_results = {}  # Dictionary to hold the host results
+    #     parasite_precalc_results = {}  # Dictionary to hold the parasite precalculation results
+    #     challengers_for_parasites_ids = [x.organism_id for x in challengers_for_parasites]
+    #
+    #     for host in organisms:
+    #         game_args = Fitness.prepare_game_args(host, champions, one_way=one_way)
+    #         key_func = lambda x: (x[0].organism_id, x[1].organism_id, x[2])
+    #         if precalc_results is not None:
+    #             non_dup_game_args = [x for x in game_args if key_func(x) not in precalc_results.keys()]
+    #             precalced = {key_func(x): precalc_results[key_func(x)]
+    #                          for x in game_args if x not in non_dup_game_args}
+    #             game_args = non_dup_game_args
+    #             all_host_results = {**all_host_results, **precalced}
+    #         all_game_args.extend(game_args)
+    #
+    #     with Pool() as pool:
+    #         for key, result in tqdm(pool.imap(Fitness.play_game_sync, all_game_args), total=len(all_game_args)):
+    #             original_key = key
+    #             value = result
+    #             all_host_results[original_key] = value
+    #
+    #             # Only create precalc_results if we didn't get any - ie the organisms are from the host population
+    #             if precalc_results is None:
+    #                 # Check if the host is in challengers_for_parasites and update the parasite results
+    #                 host = original_key[0]  # Assuming the host ID is the first element in the key
+    #                 if host in challengers_for_parasites_ids:
+    #                     new_value = -value
+    #                     new_key = (original_key[1], original_key[0], not original_key[2])
+    #                     parasite_precalc_results[new_key] = new_value
+    #
+    #     return all_host_results, parasite_precalc_results
+
     @staticmethod
-    def prepare_game_args(host, challengers, precalc_results=None, one_way=False):
+    def prepare_game_args(host, challengers, one_way=False):
         game_args = []
         for challenger in challengers:
             if one_way and host.organism_id >= challenger.organism_id:
                 continue
             for i in range(2):
                 host_is_white = i == 0
-                game_args.append((host, challenger, host_is_white, precalc_results))
+                game_args.append((host, challenger, host_is_white))
         return game_args
 
     @staticmethod
+    def _convert_player_scores_to_results_dict(organisms, champions, scores_dict):
+        result_dict = dict()
+        for host in organisms:
+            for challenger in champions:
+                for i in range(2):
+                    host_is_white = i == 0
+                    key = (host.organism_id, challenger.organism_id, host_is_white)
+                    if scores_dict[host.organism_id] > scores_dict[challenger.organism_id]:
+                        result_dict[key] = 1
+                    elif scores_dict[host.organism_id] < scores_dict[challenger.organism_id]:
+                        result_dict[key] = -1
+                    else:
+                        result_dict[key] = 0
+        return result_dict
+
+    @staticmethod
     def evaluate_fitness_async(organisms, champions, challengers_for_parasites, precalc_results=None, one_way=False):
-        all_game_args = []
         all_host_results = {}  # Dictionary to hold the host results
         parasite_precalc_results = {}  # Dictionary to hold the parasite precalculation results
         challengers_for_parasites_ids = [x.organism_id for x in challengers_for_parasites]
 
-        for host in organisms:
-            game_args = Fitness.prepare_game_args(host, champions, one_way=one_way)
-            key_func = lambda x: (x[0].organism_id, x[1].organism_id, x[2])
-            if precalc_results is not None:
-                non_dup_game_args = [x for x in game_args if key_func(x) not in precalc_results.keys()]
-                precalced = {key_func(x): precalc_results[key_func(x)]
-                             for x in game_args if x not in non_dup_game_args}
-                game_args = non_dup_game_args
-                all_host_results = {**all_host_results, **precalced}
-            all_game_args.extend(game_args)
+        chess_puzzles_inputs = GameController.get_chess_puzzles_inputs(device="cpu")
+        input_args = [(o, chess_puzzles_inputs) for o in organisms + champions]
+        organism_scores = dict()
 
-        with Pool() as pool:
-            for key, result in tqdm(pool.imap(Fitness.play_game_sync, all_game_args), total=len(all_game_args)):
-                original_key = key
-                value = result
-                all_host_results[original_key] = value
+        with Pool(processes=1) as pool:
+            for organism_id, total_score in tqdm(pool.imap(GameController.play_chess_puzzles_singleplayer, input_args), total=len(input_args)):
+                organism_scores[organism_id] = total_score
 
-                # Only create precalc_results if we didn't get any - ie the organisms are from the host population
-                if precalc_results is None:
-                    # Check if the host is in challengers_for_parasites and update the parasite results
-                    host = original_key[0]  # Assuming the host ID is the first element in the key
-                    if host in challengers_for_parasites_ids:
-                        new_value = -value
-                        new_key = (original_key[1], original_key[0], not original_key[2])
-                        parasite_precalc_results[new_key] = new_value
+        results_dict = Fitness._convert_player_scores_to_results_dict(organisms, champions, organism_scores)
+
+        for key, value in results_dict.items():
+            player1, player2, flag = key
+            if player1 in challengers_for_parasites_ids or player2 in challengers_for_parasites_ids:
+                new_key = (player2, player1, not flag)
+                parasite_precalc_results[new_key] = -value
 
         return all_host_results, parasite_precalc_results
 

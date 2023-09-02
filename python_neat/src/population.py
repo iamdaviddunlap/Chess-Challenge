@@ -12,28 +12,31 @@ random.seed(Constants.random_seed)
 
 
 class Population:
-    def __init__(self):
+    def __init__(self, organisms=None):
         self._cur_species_id = 0
         self._species_compat_thresh = Constants.species_compat_thresh_initial
-        self.organisms = []
         self.species_reps = []
         self.species_ids = []
 
-        for i in range(Constants.population_size):
-            genome = Genome()
-            organism = Organism(genome)
-            # TODO don't mutate so much
-            Mutation.mutate_genome(organism.genome)
-            Mutation.mutate_genome(organism.genome)
-            Mutation.mutate_genome(organism.genome)
-            Mutation.mutate_genome(organism.genome)
-            Mutation.mutate_genome(organism.genome)
-            Mutation.mutate_genome(organism.genome)
-            Mutation.mutate_genome(organism.genome)
-            Mutation.mutate_genome(organism.genome)
-            Mutation.mutate_genome(organism.genome)
-            Mutation.mutate_genome(organism.genome)
-            self.organisms.append(organism)
+        if organisms is None:
+            self.organisms = []
+            for i in range(Constants.population_size):
+                genome = Genome()
+                organism = Organism(genome)
+                # TODO don't mutate so much
+                Mutation.mutate_genome(organism.genome)
+                Mutation.mutate_genome(organism.genome)
+                Mutation.mutate_genome(organism.genome)
+                Mutation.mutate_genome(organism.genome)
+                Mutation.mutate_genome(organism.genome)
+                Mutation.mutate_genome(organism.genome)
+                Mutation.mutate_genome(organism.genome)
+                Mutation.mutate_genome(organism.genome)
+                Mutation.mutate_genome(organism.genome)
+                Mutation.mutate_genome(organism.genome)
+                self.organisms.append(organism)
+        else:
+            self.organisms = organisms
         self.speciate()
 
     def select_challengers(self, hall_of_fame):

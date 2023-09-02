@@ -99,7 +99,11 @@ class GameController:
         return best_move_idx, best_internal_activations
 
     @staticmethod
-    def play_chess_puzzles(player1, player2, **kwargs):
+    def play_chess_puzzles(player1, player2, gpu_chance=0.2, **kwargs):
+        device = "cuda" if random.random() < gpu_chance else "cpu"
+        player1.to_device(device)
+        player2.to_device(device)
+
         # Get the (newly shuffled) puzzles dataset and clip to the number of puzzles we're evaluating per game
         puzzles_dataset = DatasetManager().get_chess_puzzle_dataset()
         puzzles_dataset = puzzles_dataset[:Constants.num_puzzles_per_game]
@@ -117,7 +121,7 @@ class GameController:
 
             # Initialize players' weights with the initial board state before the puzzle begins
             binary_input_string = board_to_binary(board) + '0' * MOVE_ENCODING_LENGTH
-            tensor_input = torch.tensor([int(c) for c in binary_input_string], dtype=torch.float)
+            tensor_input = torch.tensor([int(c) for c in binary_input_string], dtype=torch.float).to(device)
             player1.activate(tensor_input)
             player2.activate(tensor_input)
 
@@ -139,7 +143,7 @@ class GameController:
                     legal_moves_lst = [x for x in board.legal_moves]
                     for potential_move in legal_moves_lst:
                         model_input_str = binary_board_string + move_to_binary(potential_move, board)
-                        model_input_tensor = torch.tensor([int(c) for c in model_input_str], dtype=torch.float)
+                        model_input_tensor = torch.tensor([int(c) for c in model_input_str], dtype=torch.float).to(device)
                         all_moves_input_tensors.append(model_input_tensor)
 
                     # Only get a player's preferred move if they've not been eliminated

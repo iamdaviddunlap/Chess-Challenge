@@ -9,7 +9,7 @@ from multiprocessing import Pool
 from itertools import combinations
 
 from visualize import visualize_genome
-from json_converter import genome_to_json
+from json_converter import genome_to_json, json_to_genome
 from organism import Organism
 from genome import Genome
 from mutation_handler import Mutation
@@ -17,6 +17,7 @@ from population import Population
 from fitness import Fitness
 from dataset_manager import DatasetManager
 from game_controller import GameController
+from innovation_handler import InnovationHandler
 from constants import Constants
 
 random.seed(Constants.random_seed)
@@ -46,7 +47,7 @@ def save_population(population, generation, is_host):
     # Step 5: Save each pruned organism's genome to a JSON file in the folder
     for organism in population.organisms:
         genome_data = genome_to_json(organism.genome)
-        json_file_path = os.path.join(folder_name, f"{organism.organism_id}.json")
+        json_file_path = os.path.join(folder_name, f"{organism.organism_id}_{organism.fitness}.json")
         with open(json_file_path, 'w') as json_file:
             json.dump(genome_data, json_file, indent=4)
 
@@ -88,12 +89,36 @@ def prune_hall_of_fame(hall_of_fame, generation):
     return pruned_hall_of_fame
 
 
+def load_population(population_folder):
+    population_organisms = []
+    for filename in os.listdir(population_folder):
+        with open(os.path.join(population_folder, filename)) as f:
+            json_data = json.loads(f.read())
+        loaded_genome = json_to_genome(json_data)
+        # TODO split organism_id by _ once we've saved some organisms with their fitness
+        population_organisms.append(Organism(loaded_genome, organism_id=int(filename.split('.')[0])))
+    population = Population(organisms=population_organisms)
+    return population
+
+
 def main():
+    host_population_folder = 'saved_genomes/populations/host_gen2_2023-08-29__12-46-08'
+    parasite_population_folder = 'saved_genomes/populations/parasite_gen2_2023-08-29__12-46-11'
     max_generations = 500
 
     # Initialization
-    host_population = Population()
-    parasite_population = Population()
+    if host_population_folder is None:
+        host_population = Population()
+    else:
+        host_population = load_population(host_population_folder)
+        InnovationHandler()._curOrganismId = max(InnovationHandler()._curOrganismId,
+                                                 max([x.organism_id for x in host_population.organisms])+1)
+    if parasite_population_folder is None:
+        parasite_population = Population()
+    else:
+        parasite_population = load_population(parasite_population_folder)
+        InnovationHandler()._curOrganismId = max(InnovationHandler()._curOrganismId,
+                                                 max([x.organism_id for x in parasite_population.organisms])+1)
 
     hall_of_fame = []
 

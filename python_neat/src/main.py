@@ -95,8 +95,11 @@ def load_population(population_folder):
         with open(os.path.join(population_folder, filename)) as f:
             json_data = json.loads(f.read())
         loaded_genome = json_to_genome(json_data)
-        # TODO split organism_id by _ once we've saved some organisms with their fitness
-        population_organisms.append(Organism(loaded_genome, organism_id=int(filename.split('.')[0])))
+        # Extract organism_id and fitness from the filename
+        organism_id, fitness = [int(x) for x in filename.split('.')[0].split('_')]
+        new_organism = Organism(loaded_genome, organism_id=organism_id)
+        new_organism.fitness = fitness
+        population_organisms.append(new_organism)
     population = Population(organisms=population_organisms)
     return population
 

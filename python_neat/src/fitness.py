@@ -100,7 +100,6 @@ class Fitness:
 
     @staticmethod
     def evaluate_fitness_async(organisms, champions, challengers_for_parasites, precalc_results=None, one_way=False):
-        all_host_results = {}  # Dictionary to hold the host results
         parasite_precalc_results = {}  # Dictionary to hold the parasite precalculation results
         challengers_for_parasites_ids = [x.organism_id for x in challengers_for_parasites]
 
@@ -113,9 +112,9 @@ class Fitness:
                 organism_scores[organism_id] = total_score
 
         print(organism_scores)
-        results_dict = Fitness._convert_player_scores_to_results_dict(organisms, champions, organism_scores)
+        all_host_results = Fitness._convert_player_scores_to_results_dict(organisms, champions, organism_scores)
 
-        for key, value in results_dict.items():
+        for key, value in all_host_results.items():
             player1, player2, flag = key
             if player1 in challengers_for_parasites_ids or player2 in challengers_for_parasites_ids:
                 new_key = (player2, player1, not flag)

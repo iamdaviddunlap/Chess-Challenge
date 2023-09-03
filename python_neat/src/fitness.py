@@ -108,10 +108,11 @@ class Fitness:
         input_args = [(o, chess_puzzles_inputs) for o in organisms + champions]
         organism_scores = dict()
 
-        with Pool(processes=1) as pool:
+        with Pool() as pool:
             for organism_id, total_score in tqdm(pool.imap(GameController.play_chess_puzzles_singleplayer, input_args), total=len(input_args)):
                 organism_scores[organism_id] = total_score
 
+        print(organism_scores)
         results_dict = Fitness._convert_player_scores_to_results_dict(organisms, champions, organism_scores)
 
         for key, value in results_dict.items():

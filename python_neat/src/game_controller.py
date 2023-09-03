@@ -18,7 +18,7 @@ class GameController:
     @staticmethod
     def play_game(host, parasite, host_is_white, **kwargs):
         # result = GameController.play_supervised_learning(host, parasite, **kwargs)
-        result = GameController.play_chess_puzzles(host.genome, parasite.genome, **kwargs)
+        result = GameController.play_chess_puzzles(host, parasite, **kwargs)
         return result
 
     @staticmethod
@@ -53,6 +53,19 @@ class GameController:
         return player_loss
 
     @staticmethod
+    def scores_to_int(player1_score, player2_score, one_if_player1_is_bigger=True):
+        if abs(player1_score - player2_score) < 0.0001:
+            return 0
+        if one_if_player1_is_bigger:
+            if player1_score > player2_score:
+                return 1
+        else:
+            if player1_score < player2_score:
+                return 1
+        return -1
+
+
+    @staticmethod
     def play_supervised_learning(host_player, parasite_player, gpu_chance=0.0, **kwargs):
         # dataset = DatasetHolder.XORDataset()
         # dataset = DatasetHolder.GaussianClassificationDataset()
@@ -60,7 +73,7 @@ class GameController:
         device = "cuda" if random.random() < gpu_chance else "cpu"
         host_player.to_device(device)
         parasite_player.to_device(device)
-        dataset = DatasetManager().concentric_circle_dataset(device=device)
+        dataset = DatasetManager().xor_dataset(device=device)
 
         host_loss = GameController.play_labeled_dataset_single_player(host_player, dataset, **kwargs)
         parasite_loss = GameController.play_labeled_dataset_single_player(parasite_player, dataset, **kwargs)
@@ -102,103 +115,14 @@ class GameController:
 
     @staticmethod
     def play_chess_puzzles(player1, player2, gpu_chance=0.2, **kwargs):
-        device = "cuda" if random.random() < gpu_chance else "cpu"
-        player1.to_device(device)
-        player2.to_device(device)
-
-        # Get the (newly shuffled) puzzles dataset and clip to the number of puzzles we're evaluating per game
-        puzzles_dataset = DatasetManager().get_chess_puzzle_dataset()
-        puzzles_dataset = puzzles_dataset[:Constants.num_puzzles_per_game]
-
-        # Loop over each puzzle, totaling each player's score (% of moves correctly predicted * the puzzle's difficulty)
-        player_1_total_score = 0
-        player_2_total_score = 0
-        for _, puzzle in puzzles_dataset.iterrows():
-            # Extract the puzzle info from the dataframe row
-            fen = puzzle['FEN']
-            moves = puzzle['Moves'].split(' ')
-            difficulty = puzzle['Rating_mod']
-
-            board = chess.Board(fen=fen)
-
-            # Initialize players' weights with the initial board state before the puzzle begins
-            binary_input_string = board_to_binary(board) + '0' * MOVE_ENCODING_LENGTH
-            tensor_input = torch.tensor([int(c) for c in binary_input_string], dtype=torch.float).to(device)
-            player1.activate(tensor_input)
-            player2.activate(tensor_input)
-
-            # Loop over all the moves in this puzzle. The player is only 1 color, so half the moves are just played and
-            # not evaluated. The first move in the moves list is not the players' move
-            is_player_turn = False
-            player1_correct_moves = 0
-            player2_correct_moves = 0
-            player1_is_out = False
-            player2_is_out = False
-            for i in range(len(moves)):
-                if is_player_turn:
-                    correct_move = moves[i]
-                    binary_board_string = board_to_binary(board)
-
-                    # Create the input tensors for all legal moves
-                    # Do this here so we can use the same ones for both players
-                    all_moves_input_tensors = []
-                    legal_moves_lst = [x for x in board.legal_moves]
-                    for potential_move in legal_moves_lst:
-                        model_input_str = binary_board_string + move_to_binary(potential_move, board)
-                        model_input_tensor = torch.tensor([int(c) for c in model_input_str], dtype=torch.float).to(device)
-                        all_moves_input_tensors.append(model_input_tensor)
-
-                    # Only get a player's preferred move if they've not been eliminated
-                    if not player1_is_out:
-                        player1_move_idx, p1_best_internal_activations = GameController._get_player_best_move(
-                            player1, all_moves_input_tensors, apply_best_activation=False)
-                        player1_move = legal_moves_lst[player1_move_idx]
-                        if player1_move.uci() == moves[i]:
-                            player1_correct_moves += 1
-                            player1.activations = p1_best_internal_activations
-                        else:
-                            player1_is_out = True
-                    if not player2_is_out:
-                        player2_move_idx, p2_best_internal_activations = GameController._get_player_best_move(
-                            player2, all_moves_input_tensors, apply_best_activation=False)
-                        player2_move = legal_moves_lst[player2_move_idx]
-                        if player2_move.uci() == correct_move:
-                            player2_correct_moves += 1
-                            player2.activations = p2_best_internal_activations
-                        else:
-                            player2_is_out = True
-
-                # Quit the puzzle early if both players have been eliminated
-                if player1_is_out and player2_is_out:
-                    break
-
-                # Apply the move to the board and switch if it is the players' turn or not
-                board.push_uci(moves[i])
-                is_player_turn = not is_player_turn
-
-            # When this puzzle has been completed, update both players' scores
-            # The score = % of moves correctly predicted * the puzzle's difficulty
-            player_moves_in_puzzle = float(len(moves[1::2]))
-            player_1_ratio = player1_correct_moves / player_moves_in_puzzle
-            player_2_ratio = player2_correct_moves / player_moves_in_puzzle
-            player_1_total_score += player_1_ratio * difficulty
-            player_2_total_score += player_2_ratio * difficulty
-
-        player1.reset_state()
-        player2.reset_state()
-
-        # At the end of evaluating all puzzles, return which player is better
-        # TODO maybe also return the average difficulty of the puzzles so that can be factored into fitness?
-        #  Probably not necessary if the number of puzzles we use is sufficiently high
-        if abs(player_1_total_score - player_2_total_score) < 0.0001:
-            return 0
-        if player_1_total_score > player_2_total_score:
-            return 1
-        return -1
+        chess_puzzles_inputs = GameController.get_chess_puzzles_inputs()
+        player1_id, player1_score = GameController.play_chess_puzzles_singleplayer((player1, chess_puzzles_inputs))
+        player2_id, player2_score = GameController.play_chess_puzzles_singleplayer((player2, chess_puzzles_inputs))
+        return GameController.scores_to_int(player1_score, player2_score, one_if_player1_is_bigger=True)
 
 
     @staticmethod
-    def get_chess_puzzles_inputs(device):
+    def get_chess_puzzles_inputs(device="cpu"):
         # Get the (newly shuffled) puzzles dataset and clip to the number of puzzles we're evaluating per game
         puzzles_dataset = DatasetManager().get_chess_puzzle_dataset()
         puzzles_dataset = puzzles_dataset[:Constants.num_puzzles_per_game]

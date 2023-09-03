@@ -62,7 +62,7 @@ def prune_hall_of_fame(hall_of_fame, generation):
     precalc_results = None  # No precalculated results
 
     # Step 2: Call evaluate_fitness_async
-    all_results, _ = Fitness.evaluate_fitness_async(
+    all_results, _ = Fitness.evaluate_fitness_chess_puzzles_singleplayer_async(
         organisms=organisms,
         champions=champions,
         challengers_for_parasites=challengers_for_parasites,
@@ -134,12 +134,12 @@ def main():
         challengers_for_hosts = parasite_population.select_challengers(hall_of_fame)
         challengers_for_parasites = host_population.select_challengers(hall_of_fame)
 
-        all_host_results, parasite_precalc_results = Fitness.evaluate_fitness_async(
+        all_host_results, parasite_precalc_results = Fitness.evaluate_fitness_chess_puzzles_singleplayer_async(
             organisms=host_population.organisms,
             champions=challengers_for_hosts,
             challengers_for_parasites=challengers_for_parasites)
 
-        all_parasite_results, _ = Fitness.evaluate_fitness_async(
+        all_parasite_results, _ = Fitness.evaluate_fitness_chess_puzzles_singleplayer_async(
             organisms=parasite_population.organisms,
             champions=challengers_for_parasites,
             challengers_for_parasites=challengers_for_hosts,

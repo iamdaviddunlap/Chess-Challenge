@@ -87,13 +87,15 @@ class Fitness:
     @staticmethod
     def evaluate_fitness_chess_puzzles_singleplayer_async(organisms):
         chess_puzzles_inputs = GameController.get_chess_puzzles_inputs(device="cpu")
+        mean_difficulty = np.mean([difficulty for _, difficulty in chess_puzzles_inputs])
         input_args = [(o, chess_puzzles_inputs) for o in organisms]
         organism_scores = dict()
 
         with Pool() as pool:
             for organism_id, total_score in tqdm(pool.imap(GameController.play_chess_puzzles_singleplayer, input_args), total=len(input_args)):
-                organism_scores[organism_id] = total_score
+                organism_scores[organism_id] = total_score / mean_difficulty
 
+        print(organism_scores)
         return organism_scores
 
     @staticmethod

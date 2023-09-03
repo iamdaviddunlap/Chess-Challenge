@@ -25,7 +25,7 @@ random.seed(Constants.random_seed)
 
 def save_hall_of_fame(hall_of_fame, generation, pruned=False):
     current_time = time.strftime("%Y-%m-%d__%H-%M-%S")
-    folder_name = f"saved_genomes/{current_time}_generation_{generation}"
+    folder_name = f"saved_genomes/hall_of_fame/hof_gen{generation}_{current_time}"
     if pruned:
         folder_name += "_pruned"
     os.makedirs(folder_name, exist_ok=True)
@@ -55,43 +55,43 @@ def save_population(population, generation, is_host):
         json.dump(population.get_metadata_dict(), json_file, indent=4)
 
 
-def prune_hall_of_fame(hall_of_fame, generation):
-    print('++++++++++++++++++++++++++++')
-    print('Pruning hall of fame...')
-    # Step 1: Prepare arguments
-    organisms = hall_of_fame
-    champions = hall_of_fame
-    challengers_for_parasites = []  # Empty because we're only interested in hall_of_fame vs. hall_of_fame
-    precalc_results = None  # No precalculated results
-
-    # TODO IMPORTANT fix prune hall of fame for chess
-
-    # Step 2: Call evaluate_fitness_async
-    all_results, _ = Fitness.evaluate_fitness_chess_puzzles_singleplayer_async(
-        organisms=organisms,
-        champions=champions,
-        challengers_for_parasites=challengers_for_parasites,
-        precalc_results=precalc_results,
-        one_way=True)
-
-    # Step 3: Analyze results to get top_n organisms
-    # Initialize a dictionary to hold the sum of game results for each organism
-    sum_results = {organism.organism_id: 0 for organism in hall_of_fame}
-
-    for (org1_id, org2_id, _), result in all_results.items():
-        sum_results[org1_id] += result
-        sum_results[org2_id] -= result  # Assuming that a positive result is good for org1 and bad for org2
-
-    # Sort the organisms by their summed game results
-    sorted_organisms = sorted(hall_of_fame, key=lambda x: sum_results[x.organism_id], reverse=True)
-
-    # Keep only the top_n organisms
-    pruned_hall_of_fame = sorted_organisms[:Constants.min_reduced_hof_size]
-
-    save_hall_of_fame(pruned_hall_of_fame, generation, pruned=True)
-
-    print('++++++++++++++++++++++++++++')
-    return pruned_hall_of_fame
+# def prune_hall_of_fame(hall_of_fame, generation):
+#     print('++++++++++++++++++++++++++++')
+#     print('Pruning hall of fame...')
+#     # Step 1: Prepare arguments
+#     organisms = hall_of_fame
+#     champions = hall_of_fame
+#     challengers_for_parasites = []  # Empty because we're only interested in hall_of_fame vs. hall_of_fame
+#     precalc_results = None  # No precalculated results
+#
+#     # TODO IMPORTANT fix prune hall of fame for chess
+#
+#     # Step 2: Call evaluate_fitness_async
+#     all_results, _ = Fitness.evaluate_fitness_chess_puzzles_singleplayer_async(
+#         organisms=organisms,
+#         champions=champions,
+#         challengers_for_parasites=challengers_for_parasites,
+#         precalc_results=precalc_results,
+#         one_way=True)
+#
+#     # Step 3: Analyze results to get top_n organisms
+#     # Initialize a dictionary to hold the sum of game results for each organism
+#     sum_results = {organism.organism_id: 0 for organism in hall_of_fame}
+#
+#     for (org1_id, org2_id, _), result in all_results.items():
+#         sum_results[org1_id] += result
+#         sum_results[org2_id] -= result  # Assuming that a positive result is good for org1 and bad for org2
+#
+#     # Sort the organisms by their summed game results
+#     sorted_organisms = sorted(hall_of_fame, key=lambda x: sum_results[x.organism_id], reverse=True)
+#
+#     # Keep only the top_n organisms
+#     pruned_hall_of_fame = sorted_organisms[:Constants.min_reduced_hof_size]
+#
+#     save_hall_of_fame(pruned_hall_of_fame, generation, pruned=True)
+#
+#     print('++++++++++++++++++++++++++++')
+#     return pruned_hall_of_fame
 
 
 def load_population(population_folder):
@@ -213,7 +213,9 @@ def main():
         parasite_population.speciate()
 
         if len(hall_of_fame) >= Constants.max_hof_size:
-            hall_of_fame = prune_hall_of_fame(hall_of_fame, generation)
+            # Turning off pruning of the hall of fame for now
+            # hall_of_fame = prune_hall_of_fame(hall_of_fame, generation)
+            pass
         elif generation % 1 == 0:
             save_hall_of_fame(hall_of_fame, generation)
             save_population(host_population, generation+1, is_host=True)

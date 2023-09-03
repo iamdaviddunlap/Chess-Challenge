@@ -72,7 +72,7 @@ class Fitness:
         return all_host_results, parasite_precalc_results
 
     @staticmethod
-    def _convert_player_scores_to_results_dict(organisms, champions, scores_dict):
+    def convert_player_scores_to_results_dict(organisms, champions, scores_dict):
         result_dict = dict()
         for host in organisms:
             for challenger in champions:
@@ -85,29 +85,16 @@ class Fitness:
         return result_dict
 
     @staticmethod
-    def evaluate_fitness_chess_puzzles_singleplayer_async(organisms, champions, challengers_for_parasites, precalc_results=None, one_way=False):
-        # TODO make use of precalc_results
-        parasite_precalc_results = {}  # Dictionary to hold the parasite precalculation results
-        challengers_for_parasites_ids = [x.organism_id for x in challengers_for_parasites]
-
+    def evaluate_fitness_chess_puzzles_singleplayer_async(organisms):
         chess_puzzles_inputs = GameController.get_chess_puzzles_inputs(device="cpu")
-        input_args = [(o, chess_puzzles_inputs) for o in organisms + champions]
+        input_args = [(o, chess_puzzles_inputs) for o in organisms]
         organism_scores = dict()
 
         with Pool() as pool:
             for organism_id, total_score in tqdm(pool.imap(GameController.play_chess_puzzles_singleplayer, input_args), total=len(input_args)):
                 organism_scores[organism_id] = total_score
 
-        print(organism_scores)
-        all_host_results = Fitness._convert_player_scores_to_results_dict(organisms, champions, organism_scores)
-
-        for key, value in all_host_results.items():
-            player1, player2, flag = key
-            if player1 in challengers_for_parasites_ids or player2 in challengers_for_parasites_ids:
-                new_key = (player2, player1, not flag)
-                parasite_precalc_results[new_key] = -value
-
-        return all_host_results, parasite_precalc_results
+        return organism_scores
 
     @staticmethod
     def convert_game_result_to_fitness(result):

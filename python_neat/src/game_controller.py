@@ -5,7 +5,7 @@ import tqdm
 import logging
 from torch.profiler import profile, record_function, ProfilerActivity
 
-from chess_util import board_to_binary, move_to_binary, MOVE_ENCODING_LENGTH, STARTING_POSITION_INPUT_TENSOR
+from chess_util import board_to_binary, move_to_binary, MOVE_ENCODING_LENGTH, STARTING_POSITION_INPUT_ARRAY
 from constants import Constants
 from dataset_manager import DatasetManager
 
@@ -16,8 +16,8 @@ class GameController:
 
     @staticmethod
     def play_game(host, parasite, host_is_white, **kwargs):
-        result = GameController.play_supervised_learning(host, parasite, **kwargs)
-        # result = GameController.play_chess_puzzles(host, parasite, **kwargs)
+        # result = GameController.play_supervised_learning(host, parasite, **kwargs)
+        result = GameController.play_chess_puzzles(host, parasite, **kwargs)
         return result
 
     @staticmethod
@@ -94,7 +94,7 @@ class GameController:
         Given a list of tensors, activate the player with each tensor and return the index of the input that resulted
         in the most activated output.
         """
-        old_internal_activations = player.activations.clone()
+        old_internal_activations = np.copy(player.activations)
         best_activation = -10000000
         best_move_idx = None
         best_internal_activations = old_internal_activations
@@ -104,7 +104,7 @@ class GameController:
             if output_result > best_activation:
                 best_activation = output_result
                 best_move_idx = i
-                best_internal_activations = player.activations.clone()  # TODO do we need to be cloning here?
+                best_internal_activations = np.copy(player.activations)  # TODO do we need to be cloning here?
             player.activations = old_internal_activations
 
         if apply_best_activation:
@@ -171,7 +171,7 @@ class GameController:
         total_score = 0
         for puzzle_tup in chess_puzzles_inputs:
             puzzle_lst, difficulty = puzzle_tup
-            player.activate(STARTING_POSITION_INPUT_TENSOR.to(device))
+            player.activate(STARTING_POSITION_INPUT_ARRAY)
             total_correct_moves = 0
             for moves_tuple in puzzle_lst:
                 moves_input_tensors, correct_idx = moves_tuple

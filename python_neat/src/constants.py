@@ -1,10 +1,10 @@
 class Constants:
     # General Parameters
     population_size = 200
-    # inputs_count = 284
-    # outputs_count = 1
-    inputs_count = 3
+    inputs_count = 284
     outputs_count = 1
+    # inputs_count = 3
+    # outputs_count = 1
     min_val = -99.999
     max_val = 99.999
     random_seed = 1

@@ -1,5 +1,4 @@
 import random
-import torch
 import numpy as np
 import chess
 import tqdm
@@ -17,8 +16,8 @@ class GameController:
 
     @staticmethod
     def play_game(host, parasite, host_is_white, **kwargs):
-        # result = GameController.play_supervised_learning(host, parasite, **kwargs)
-        result = GameController.play_chess_puzzles(host, parasite, **kwargs)
+        result = GameController.play_supervised_learning(host, parasite, **kwargs)
+        # result = GameController.play_chess_puzzles(host, parasite, **kwargs)
         return result
 
     @staticmethod
@@ -33,12 +32,12 @@ class GameController:
         for item in dataset:
             # Separating inputs and correct outputs based on Constants.outputs_count
             inputs = item[:-Constants.outputs_count]
-            correct_outputs = item[-Constants.outputs_count:].cpu()
+            correct_outputs = item[-Constants.outputs_count:]
 
             player.genome.reset_state()
 
             # Assuming player.genome.activate() returns an array of outputs of length Constants.outputs_count
-            player_outputs = player.genome.activate(inputs, **kwargs).cpu()
+            player_outputs = player.genome.activate(inputs, **kwargs)
 
             # Checking for NaNs in player_outputs
             if any(np.isnan(output) for output in player_outputs):
@@ -49,7 +48,6 @@ class GameController:
                 player_output = player_output.item()  # Extract value from tensor if it's a tensor
                 player_loss += abs(correct_output - player_output)
 
-        torch.cuda.empty_cache()
         return player_loss
 
     @staticmethod
@@ -102,7 +100,7 @@ class GameController:
         best_internal_activations = old_internal_activations
         for i in range(len(all_moves_input_tensors)):
             input_tensor = all_moves_input_tensors[i]
-            output_result = player.activate(input_tensor).cpu().item()
+            output_result = player.activate(input_tensor)[0]
             if output_result > best_activation:
                 best_activation = output_result
                 best_move_idx = i
@@ -150,7 +148,7 @@ class GameController:
                     legal_moves_lst = [x for x in board.legal_moves]
                     for potential_move in legal_moves_lst:
                         model_input_str = binary_board_string + move_to_binary(potential_move, board)
-                        model_input_tensor = torch.tensor([int(c) for c in model_input_str], dtype=torch.float).to(device)
+                        model_input_tensor = np.array([int(c) for c in model_input_str], dtype=np.float)
                         all_moves_input_tensors.append(model_input_tensor)
                     correct_move_idx = [x.uci() for x in legal_moves_lst].index(correct_move)
                     puzzle_inputs.append((all_moves_input_tensors, correct_move_idx))

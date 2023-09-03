@@ -64,6 +64,8 @@ def prune_hall_of_fame(hall_of_fame, generation):
     challengers_for_parasites = []  # Empty because we're only interested in hall_of_fame vs. hall_of_fame
     precalc_results = None  # No precalculated results
 
+    # TODO IMPORTANT fix prune hall of fame for chess
+
     # Step 2: Call evaluate_fitness_async
     all_results, _ = Fitness.evaluate_fitness_chess_puzzles_singleplayer_async(
         organisms=organisms,
@@ -137,16 +139,30 @@ def main():
         challengers_for_hosts = parasite_population.select_challengers(hall_of_fame)
         challengers_for_parasites = host_population.select_challengers(hall_of_fame)
 
-        all_host_results, parasite_precalc_results = Fitness.evaluate_fitness_chess_puzzles_singleplayer_async(
+        # TODO put back
+        # all_host_results, parasite_precalc_results = Fitness.evaluate_fitness_chess_puzzles_singleplayer_async(
+        #     organisms=host_population.organisms,
+        #     champions=challengers_for_hosts,
+        #     challengers_for_parasites=challengers_for_parasites)
+        #
+        # all_parasite_results, _ = Fitness.evaluate_fitness_chess_puzzles_singleplayer_async(
+        #     organisms=parasite_population.organisms,
+        #     champions=challengers_for_parasites,
+        #     challengers_for_parasites=challengers_for_hosts,
+        #     precalc_results=parasite_precalc_results)
+
+        # TODO remove
+        all_host_results, parasite_precalc_results = Fitness.evaluate_fitness_adversarial_async(
             organisms=host_population.organisms,
             champions=challengers_for_hosts,
             challengers_for_parasites=challengers_for_parasites)
 
-        all_parasite_results, _ = Fitness.evaluate_fitness_chess_puzzles_singleplayer_async(
+        all_parasite_results, _ = Fitness.evaluate_fitness_adversarial_async(
             organisms=parasite_population.organisms,
             champions=challengers_for_parasites,
             challengers_for_parasites=challengers_for_hosts,
             precalc_results=parasite_precalc_results)
+
 
         # Calculate fitnesses for the organisms in each population
         penalize_size = True
@@ -158,11 +174,11 @@ def main():
         parasite_champ = parasite_population.get_superchamp()
 
         # Calculate exact loss (NOTE: this cannot be done without labeled dataset)
-        # dataset = DatasetManager().concentric_circle_dataset()
-        # host_loss = GameController.play_labeled_dataset_single_player(host_champ, dataset)
-        # parasite_loss = GameController.play_labeled_dataset_single_player(parasite_champ, dataset)
-        # print(f"Generation {generation}: host champion loss: {host_loss}")
-        # print(f"Generation {generation}: parasite champion loss: {parasite_loss}")
+        dataset = DatasetManager().xor_dataset()
+        host_loss = GameController.play_labeled_dataset_single_player(host_champ, dataset)
+        parasite_loss = GameController.play_labeled_dataset_single_player(parasite_champ, dataset)
+        print(f"Generation {generation}: host champion loss: {host_loss}")
+        print(f"Generation {generation}: parasite champion loss: {parasite_loss}")
 
         host_white_result = GameController.play_game(host_champ, parasite_champ, host_is_white=True)
         host_black_result = GameController.play_game(host_champ, parasite_champ, host_is_white=False)

@@ -10,14 +10,12 @@ def genome_to_json(genome):
         'connections': []
     }
 
-    reverse_mapping = {v: k for k, v in ACTIVATION_MAPPING.items()}
-
     # Serialize nodes
     for node in genome.nodes:
         node_data = {
             'node_id': node.node_id,
             'node_type': node.node_type.value,
-            'activation_function': reverse_mapping[node.activation_function].value,
+            'activation_function': node.activation_function.value,
             'bias': node.bias
         }
         genome_data['nodes'].append(node_data)
@@ -44,7 +42,7 @@ def json_to_genome(genome_data):
     for node_data in genome_data['nodes']:
         node_type = NodeType(node_data['node_type'])
         activation_function_name = node_data['activation_function']
-        activation_function = ACTIVATION_MAPPING[ActivationFunction(activation_function_name)]
+        activation_function = ActivationFunction(activation_function_name)
         bias = node_data['bias']
         node_id = node_data['node_id']
         loaded_genome.add_node(node_type, activation_function, bias, node_id=node_id)
@@ -88,7 +86,7 @@ if __name__ == '__main__':
     for item in dataset:
         # Separating inputs and correct outputs based on Constants.outputs_count
         inputs = item[:-Constants.outputs_count]
-        correct_outputs = item[-Constants.outputs_count:].cpu()
+        correct_outputs = item[-Constants.outputs_count:]
 
         loaded_genome.reset_state()
 

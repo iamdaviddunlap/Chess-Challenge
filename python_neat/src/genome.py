@@ -1,7 +1,7 @@
-import torch
-import torch.nn.functional as F
+import numpy as np
 import networkx as nx
 import random
+import warnings
 from enum import Enum
 
 from innovation_handler import InnovationHandler
@@ -25,12 +25,34 @@ class ActivationFunction(Enum):
     TANH = "tanh"
 
 
+def sigmoid(x):
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        result = 1 / (1 + np.exp(-x))
+
+        if w:
+            # Ignore warnings (caused when np.exp(-x) is inf or -inf. This isn't a problem because the sigmoid is just
+            # exactly 0.0 or 1.0 in those cases)
+            pass
+
+    return result
+
+
+def relu(x):
+    return np.maximum(0, x)
+
+
+def leaky_relu(x, negative_slope=0.01):
+    return np.where(x > 0, x, x * negative_slope)
+
+
 ACTIVATION_MAPPING = {
-    ActivationFunction.IDENTITY: torch.nn.Identity(),
-    ActivationFunction.SIGMOID: torch.sigmoid,
-    ActivationFunction.RELU: torch.relu,
-    ActivationFunction.LEAKY_RELU: F.leaky_relu,
-    ActivationFunction.TANH: torch.tanh,
+    ActivationFunction.IDENTITY: lambda x: x,
+    ActivationFunction.SIGMOID: sigmoid,
+    ActivationFunction.RELU: relu,
+    ActivationFunction.LEAKY_RELU: leaky_relu,
+    ActivationFunction.TANH: np.tanh,
 }
 
 
@@ -65,7 +87,7 @@ class Genome:
     def __init__(self, fill_genome=True):
         self.nodes = []
         self.connections = []
-        self.activations = torch.zeros(len(self.nodes))
+        self.activations = np.zeros(len(self.nodes))
         self.device = "cpu"
 
         if not fill_genome:
@@ -74,13 +96,13 @@ class Genome:
         # Adding Input Nodes
         node_num = 0
         for _ in range(Constants.inputs_count):
-            self.add_node(NodeType.INPUT, ACTIVATION_MAPPING[ActivationFunction.IDENTITY], 0.0, node_id=node_num)
+            self.add_node(NodeType.INPUT, ActivationFunction.IDENTITY, 0.0, node_id=node_num)
             node_num += 1
 
         # Adding Output Nodes and Connections
         for i in range(Constants.outputs_count):
             bias = round(random.uniform(-1, 1), 3)
-            self.add_node(NodeType.OUTPUT, ACTIVATION_MAPPING[ActivationFunction.IDENTITY], bias, node_id=node_num)
+            self.add_node(NodeType.OUTPUT, ActivationFunction.IDENTITY, bias, node_id=node_num)
             node_num += 1
             for j in range(len(self.nodes) - (i + 1)):
                 cur_in = self.nodes[j]
@@ -113,8 +135,8 @@ class Genome:
         self.node_geno_to_nodes_lst_idx = {node.node_id: idx for idx, node in enumerate(self.nodes)}
 
         # Create connection matrix with 3 dimensions
-        self.connection_matrix = torch.zeros((len(self.nodes), len(self.nodes), 2))
-        self.connection_matrix[:, :, 1] = float('nan')
+        self.connection_matrix = np.zeros((len(self.nodes), len(self.nodes), 2))
+        self.connection_matrix[:, :, 1] = np.nan
 
         for connection in self.connections:
             if connection.is_enabled:
@@ -122,22 +144,22 @@ class Genome:
                 output_node_id = connection.output_node.node_id
                 weight = connection.weight
 
-                # Assign the weight to the connection (using the 0th index in the third dimension)
+                # Assign the weight to the connection
                 self.connection_matrix[
                     self.node_geno_to_pheno[input_node_id], self.node_geno_to_pheno[output_node_id], 0] = weight
 
                 if connection.gater_node:
-                    # Assign the gate to the connection (using the 1st index in the third dimension)
+                    # Assign the gate to the connection
                     self.connection_matrix[
                         self.node_geno_to_pheno[input_node_id], self.node_geno_to_pheno[output_node_id], 1] = \
                         self.node_geno_to_pheno[connection.gater_node.node_id]
 
-        self.inputs_mask = torch.tensor([self.node_geno_to_pheno[node.node_id] for node in self.nodes if node.node_type == NodeType.INPUT])
-        self.outputs_mask = torch.tensor([self.node_geno_to_pheno[node.node_id] for node in self.nodes if node.node_type == NodeType.OUTPUT])
-        self.gates_mask = ~torch.isnan(self.connection_matrix[:, :, 1])
-        self.activations = torch.zeros(len(self.nodes))
-
-        self.to_device(self.device)
+        self.inputs_mask = np.array(
+            [self.node_geno_to_pheno[node.node_id] for node in self.nodes if node.node_type == NodeType.INPUT])
+        self.outputs_mask = np.array(
+            [self.node_geno_to_pheno[node.node_id] for node in self.nodes if node.node_type == NodeType.OUTPUT])
+        self.gates_mask = ~np.isnan(self.connection_matrix[:, :, 1])
+        self.activations = np.zeros(len(self.nodes))
 
     def determine_activation_order(self):
         # Initialize directed graph
@@ -267,44 +289,43 @@ class Genome:
         return genetic_difference
 
     def activate(self, input_activations, max_iterations=10, simulate_only=False):
-
         if simulate_only:
-            old_activations = self.activations.clone()
+            old_activations = np.copy(self.activations)
 
         try:
             self.activations[self.inputs_mask] = input_activations
-        except RuntimeError as e:
+        except ValueError as e:
             raise Exception(f'Inputs of length {len(input_activations)} don\'t match network with input size '
-                            f'{torch.sum(self.inputs_mask).cpu().item()} :: {e}')
+                            f'{len(self.inputs_mask)} :: {e}')
 
         # Iterate Through Time Steps
         for i in range(max_iterations):
-            new_activations = self.activations.clone()
+            new_activations = np.copy(self.activations)
             for node_id in self.activation_order:
                 phen_id = self.node_geno_to_pheno[node_id]
                 node = self.nodes[self.node_geno_to_nodes_lst_idx[node_id]]
                 gates_mask = self.gates_mask[:, phen_id]
                 incoming_activations = self.connection_matrix[:, phen_id, 0] * new_activations
                 incoming_activations[gates_mask] *= new_activations[
-                    self.connection_matrix[:, phen_id, 1][gates_mask].long()]
-                incoming_activation = torch.sum(incoming_activations)
+                    self.connection_matrix[:, phen_id, 1][gates_mask].astype(np.long)]
+                incoming_activation = np.sum(incoming_activations)
                 new_activation = new_activations[phen_id] + incoming_activation + node.bias
-                new_activation = torch.clamp(new_activation, min=-1e12, max=1e12)
+                new_activation = np.clip(new_activation, -1e12, 1e12)
                 # Apply activation function
-                new_activations[phen_id] = node.activation_function(new_activation)
+                new_activations[phen_id] = ACTIVATION_MAPPING[node.activation_function](new_activation)
 
             # Update activations
             self.activations = new_activations
 
-        outputs_tensor = self.activations[self.outputs_mask]
+        outputs_array = self.activations[self.outputs_mask]
 
         if simulate_only:
             self.activations = old_activations
 
-        return outputs_tensor
+        return outputs_array
 
     def reset_state(self):
-        self.activations = torch.zeros(len(self.nodes)).to(self.device)
+        self.activations = np.zeros(len(self.nodes))
 
     def clone(self):
         # Create a new Genome object without filling it
@@ -341,9 +362,4 @@ class Genome:
         return cloned_genome
 
     def to_device(self, device):
-        self.device = device
-        self.activations = self.activations.to(device)
-        self.connection_matrix = self.connection_matrix.to(device)
-        self.gates_mask = self.gates_mask.to(device)
-        self.inputs_mask = self.inputs_mask.to(device)
-        self.outputs_mask = self.outputs_mask.to(device)
+        pass

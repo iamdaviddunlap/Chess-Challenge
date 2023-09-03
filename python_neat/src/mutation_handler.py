@@ -70,14 +70,14 @@ class Mutation:
 
     @staticmethod
     def mutate_activation_function(genome):
-        from genome import ActivationFunction, ACTIVATION_MAPPING
+        from genome import ActivationFunction
         target_node = random.choice(genome.nodes)
         while target_node.node_type.value == "input":
             target_node = random.choice(genome.nodes)
         cur_func = target_node.activation_function
         new_func = cur_func
         while new_func == cur_func:
-            new_func = ACTIVATION_MAPPING[random.choice(list(ActivationFunction))]
+            new_func = random.choice(list(ActivationFunction))
         target_node.activation_function = new_func
 
     @staticmethod
@@ -206,7 +206,7 @@ class Mutation:
 
             # Create new node
             bias = round(random.uniform(-1, 1), 3)
-            activation_function = ACTIVATION_MAPPING[random.choice(list(ActivationFunction))]
+            activation_function = random.choice(list(ActivationFunction))
             new_node = genome.add_node(NodeType.HIDDEN, activation_function, bias, source_con=old_connection.connection_id)
 
             genome.add_connection(1, old_connection.input_node, None, new_node)

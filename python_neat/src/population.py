@@ -257,3 +257,12 @@ class Population:
         cur_id = self._cur_species_id
         self._cur_species_id += 1
         return cur_id
+
+    def get_metadata_dict(self):
+        return {
+            "_cur_species_id": self._cur_species_id,
+            "_species_compat_thresh": self._species_compat_thresh,
+            "organism_ids": [o.organism_id for o in self.organisms],
+            "species_ids": self.species_ids,
+            "species_rep_ids": [o.organism_id for o in self.species_reps]
+        }

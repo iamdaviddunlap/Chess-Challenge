@@ -118,6 +118,7 @@ class GameController:
         chess_puzzles_inputs = GameController.get_chess_puzzles_inputs()
         player1_id, player1_score = GameController.play_chess_puzzles_singleplayer((player1, chess_puzzles_inputs))
         player2_id, player2_score = GameController.play_chess_puzzles_singleplayer((player2, chess_puzzles_inputs))
+        print(f"In play_chess_puzzles, player1_score: {player1_score}, player2_score: {player2_score}")
         return GameController.scores_to_int(player1_score, player2_score, one_if_player1_is_bigger=True)
 
 

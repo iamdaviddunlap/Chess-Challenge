@@ -44,12 +44,15 @@ def save_population(population, generation, is_host):
     folder_name = f"saved_genomes/populations/{population_name}_gen{generation}_{current_time}"
     os.makedirs(folder_name, exist_ok=True)
 
-    # Step 5: Save each pruned organism's genome to a JSON file in the folder
     for organism in population.organisms:
         genome_data = genome_to_json(organism.genome)
         json_file_path = os.path.join(folder_name, f"{organism.organism_id}_{organism.fitness}.json")
         with open(json_file_path, 'w') as json_file:
             json.dump(genome_data, json_file, indent=4)
+    # Save metadata
+    json_file_path = os.path.join(folder_name, f"metadata.json")
+    with open(json_file_path, 'w') as json_file:
+        json.dump(population.get_metadata_dict(), json_file, indent=4)
 
 
 def prune_hall_of_fame(hall_of_fame, generation):

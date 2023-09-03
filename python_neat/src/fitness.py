@@ -79,16 +79,14 @@ class Fitness:
                 for i in range(2):
                     host_is_white = i == 0
                     key = (host.organism_id, challenger.organism_id, host_is_white)
-                    if scores_dict[host.organism_id] > scores_dict[challenger.organism_id]:
-                        result_dict[key] = 1
-                    elif scores_dict[host.organism_id] < scores_dict[challenger.organism_id]:
-                        result_dict[key] = -1
-                    else:
-                        result_dict[key] = 0
+                    result_dict[key] = GameController.scores_to_int(scores_dict[host.organism_id],
+                                                                    scores_dict[challenger.organism_id],
+                                                                    one_if_player1_is_bigger=True)
         return result_dict
 
     @staticmethod
     def evaluate_fitness_chess_puzzles_singleplayer_async(organisms, champions, challengers_for_parasites, precalc_results=None, one_way=False):
+        # TODO make use of precalc_results
         parasite_precalc_results = {}  # Dictionary to hold the parasite precalculation results
         challengers_for_parasites_ids = [x.organism_id for x in challengers_for_parasites]
 

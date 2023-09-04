@@ -1,4 +1,8 @@
 class Constants:
+    # Low CPU mode flag
+    half_power = True
+
+
     # General Parameters
     population_size = 200
     inputs_count = 284

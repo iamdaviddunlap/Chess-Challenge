@@ -38,6 +38,20 @@ def save_hall_of_fame(hall_of_fame, generation, pruned=False):
             json.dump(genome_data, json_file, indent=4)
 
 
+def load_hall_of_fame(hall_of_fame_folder):
+    hall_of_fame = []
+    for filename in os.listdir(hall_of_fame_folder):
+        with open(os.path.join(hall_of_fame_folder, filename)) as f:
+            json_data = json.loads(f.read())
+        loaded_genome = json_to_genome(json_data)
+        # Extract organism_id and fitness from the filename
+        organism_id = int(filename.split('.')[0])
+        new_organism = Organism(loaded_genome, organism_id=organism_id)
+        hall_of_fame.append(new_organism)
+
+    return hall_of_fame
+
+
 def save_population(population, generation, is_host):
     current_time = time.strftime("%Y-%m-%d__%H-%M-%S")
     population_name = "host" if is_host else "parasite"
@@ -96,28 +110,36 @@ def save_population(population, generation, is_host):
 
 def load_population(population_folder):
     population_organisms = []
+    metadata_filename = "pop_metadata.json"
     for filename in os.listdir(population_folder):
-        with open(os.path.join(population_folder, filename)) as f:
-            json_data = json.loads(f.read())
-        loaded_genome = json_to_genome(json_data)
-        # Extract organism_id and fitness from the filename
-        organism_id, fitness = [int(x) for x in filename.split('.')[0].split('_')]
-        new_organism = Organism(loaded_genome, organism_id=organism_id)
-        new_organism.fitness = fitness
-        population_organisms.append(new_organism)
+        if filename != metadata_filename:
+            with open(os.path.join(population_folder, filename)) as f:
+                json_data = json.loads(f.read())
+            loaded_genome = json_to_genome(json_data)
+            # Extract organism_id and fitness from the filename
+            organism_id, fitness = [int(x) for x in filename.split('.')[0].split('_')]
+            new_organism = Organism(loaded_genome, organism_id=organism_id)
+            new_organism.fitness = fitness
+            population_organisms.append(new_organism)
     population = Population(organisms=population_organisms)
 
-    with open(os.path.join(population_folder, "pop_metadata.json")) as f:
+    with open(os.path.join(population_folder, metadata_filename)) as f:
         pop_metadata = json.loads(f.read())
+    population._cur_species_id = pop_metadata["_cur_species_id"]
+    population._species_compat_thresh = pop_metadata["_species_compat_thresh"]
 
     return population
 
 
 def main():
-    # host_population_folder = 'saved_genomes/populations/host_gen2_2023-08-29__12-46-08'
-    # parasite_population_folder = 'saved_genomes/populations/parasite_gen2_2023-08-29__12-46-11'
-    host_population_folder = None
-    parasite_population_folder = None
+    host_population_folder = 'saved_genomes/populations/host_gen20_2023-09-03__20-33-33'
+    parasite_population_folder = 'saved_genomes/populations/parasite_gen20_2023-09-03__20-33-36'
+    hall_of_fame_folder = 'saved_genomes/hall_of_fame/hof_gen19_2023-09-03__20-33-33'
+    starting_generation = 3
+    # starting_generation = 1
+    # host_population_folder = None
+    # parasite_population_folder = None
+    # hall_of_fame_folder = None
     max_generations = 500
 
     # Initialization
@@ -127,34 +149,46 @@ def main():
         host_population = load_population(host_population_folder)
         InnovationHandler()._curOrganismId = max(InnovationHandler()._curOrganismId,
                                                  max([x.organism_id for x in host_population.organisms])+1)
+        InnovationHandler()._curNodeId = max(InnovationHandler()._curNodeId,
+                                                 max({node_id for o in host_population.organisms
+                                                      for node_id in [n.node_id for n in o.genome.nodes]})+1)
+        InnovationHandler()._curConnectionId = max(InnovationHandler()._curConnectionId,
+                                                   max({conn_id for o in host_population.organisms
+                                                       for conn_id in [c.connection_id for c in o.genome.connections]})+1)
+
     if parasite_population_folder is None:
         parasite_population = Population()
     else:
         parasite_population = load_population(parasite_population_folder)
         InnovationHandler()._curOrganismId = max(InnovationHandler()._curOrganismId,
                                                  max([x.organism_id for x in parasite_population.organisms])+1)
+        InnovationHandler()._curNodeId = max(InnovationHandler()._curNodeId,
+                                                 max({node_id for o in parasite_population.organisms
+                                                      for node_id in [n.node_id for n in o.genome.nodes]})+1)
+        InnovationHandler()._curConnectionId = max(InnovationHandler()._curConnectionId,
+                                                   max({conn_id for o in parasite_population.organisms
+                                                       for conn_id in [c.connection_id for c in o.genome.connections]})+1)
 
-    hall_of_fame = []
+    if hall_of_fame_folder is None:
+        hall_of_fame = []
+    else:
+        hall_of_fame = load_hall_of_fame(hall_of_fame_folder)
 
     # Main evolutionary loop
-    for generation in range(1, max_generations+1):
+    for generation in range(starting_generation, max_generations+1):
         gen_start_time = time.time()
 
-        challengers_for_hosts = parasite_population.select_challengers(hall_of_fame)
-        challengers_for_parasites = host_population.select_challengers(hall_of_fame)
+        hof_challengers = random.sample(
+            hall_of_fame, k=min(len(hall_of_fame), 10))
 
-        host_scores = Fitness.evaluate_fitness_chess_puzzles_singleplayer_async(
-            organisms=host_population.organisms)
-
-        parasite_scores = Fitness.evaluate_fitness_chess_puzzles_singleplayer_async(
-            organisms=parasite_population.organisms)
-        all_scores = {**host_scores, **parasite_scores}
+        all_scores = Fitness.evaluate_fitness_chess_puzzles_singleplayer_async(
+            organisms=host_population.organisms+parasite_population.organisms+hof_challengers)
 
         all_host_results = Fitness.convert_player_scores_to_results_dict(host_population.organisms,
-                                                                         parasite_population.organisms,
+                                                                         parasite_population.organisms+hof_challengers,
                                                                          all_scores)
         all_parasite_results = Fitness.convert_player_scores_to_results_dict(parasite_population.organisms,
-                                                                             host_population.organisms,
+                                                                             host_population.organisms+hof_challengers,
                                                                              all_scores)
 
         # # XOR fitness calculation

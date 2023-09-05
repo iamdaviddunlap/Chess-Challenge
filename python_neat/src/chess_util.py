@@ -77,6 +77,49 @@ def move_to_binary(move, board):
     return final_move_bin
 
 
+def decode_move_binary_str(move_str):
+    # Function to convert 4-bit binary to its corresponding character
+    def bin_to_char(bin_4bit, is_letter):
+        # Convert 4-bit binary to integer
+        val = int(bin_4bit, 2)
+
+        # If it's a letter
+        if is_letter:
+            return chr(65 + val)  # 65 is ASCII value of 'A'
+        # If it's a number
+        else:
+            return chr(48 + val+1)  # 48 is ASCII value of '0'
+
+    # Extract the move info
+    char1 = bin_to_char(move_str[:4], True)
+    char2 = bin_to_char(move_str[4:8], False)
+    char3 = bin_to_char(move_str[8:12], True)
+    char4 = bin_to_char(move_str[12:16], False)
+    move_uci = (char1+char2+char3+char4).lower()
+
+    is_capture, is_en_passant, is_promotion, is_castles = [x == '1' for x in move_str[16:20]]
+    capture_piece_bin = move_str[20:24]
+    promotion_piece_bin = move_str[24:28]
+
+    result_dict = {
+        'move_uci': move_uci,
+        'is_capture': is_capture,
+        'is_en_passant': is_en_passant,
+        'is_promotion': is_promotion,
+        'is_castles': is_castles,
+        'capture_piece_bin': capture_piece_bin,
+        'promotion_piece_bin': promotion_piece_bin,
+    }
+    return result_dict
+
+
+def analyze_full_input_arr(input_np_arr):
+    input_str = ''.join([str(int(x)) for x in input_np_arr])
+    board = binary_board_to_chess_board(input_str[:BOARD_ENCODING_LENGTH])
+    move_dict = decode_move_binary_str(input_str[BOARD_ENCODING_LENGTH:])
+    return board, move_dict
+
+
 def binary_board_to_ascii_board(binary_str):
     # Initialize an empty board in ASCII format
     ascii_board = [[' ' for _ in range(8)] for _ in range(8)]
@@ -113,6 +156,41 @@ def binary_board_to_ascii_board(binary_str):
     # Convert the board to string format
     ascii_str = '\n'.join(reversed([' '.join(row) for row in ascii_board]))
     return ascii_str
+
+
+def binary_board_to_chess_board(binary_str):
+    # Initialize an empty chess board
+    board = chess.Board(fen=None)
+
+    # Piece lookup table
+    piece_lookup = {
+        '001': chess.PAWN,
+        '010': chess.ROOK,
+        '011': chess.KNIGHT,
+        '100': chess.BISHOP,
+        '101': chess.QUEEN,
+        '110': chess.KING,
+    }
+
+    # Loop through the board's squares
+    for square in range(64):
+        # Extract the 4-bit chunk corresponding to this square
+        chunk = binary_str[square * 4: square * 4 + 4]
+
+        # Extract the color bit and the piece bits
+        color_bit, piece_bits = chunk[0], chunk[1:]
+
+        # Decode the piece type
+        piece_type = piece_lookup.get(piece_bits)
+
+        if piece_type:
+            # Create the piece object
+            piece = chess.Piece(piece_type, color=(color_bit == '1'))
+
+            # Place the piece on the board
+            board.set_piece_at(square, piece)
+
+    return board
 
 
 # Function for a bot to make a move

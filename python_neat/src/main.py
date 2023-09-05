@@ -132,10 +132,10 @@ def load_population(population_folder):
 
 
 def main():
-    host_population_folder = 'saved_genomes/populations/host_gen20_2023-09-03__20-33-33'
-    parasite_population_folder = 'saved_genomes/populations/parasite_gen20_2023-09-03__20-33-36'
-    hall_of_fame_folder = 'saved_genomes/hall_of_fame/hof_gen19_2023-09-03__20-33-33'
-    starting_generation = 3
+    host_population_folder = 'saved_genomes/populations/host_gen29_2023-09-04__14-32-19'
+    parasite_population_folder = 'saved_genomes/populations/parasite_gen29_2023-09-04__14-32-22'
+    hall_of_fame_folder = 'saved_genomes/hall_of_fame/hof_gen28_2023-09-04__14-32-18'
+    starting_generation = 29
     # starting_generation = 1
     # host_population_folder = None
     # parasite_population_folder = None

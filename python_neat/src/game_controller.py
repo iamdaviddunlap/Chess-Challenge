@@ -5,7 +5,7 @@ import tqdm
 import logging
 from torch.profiler import profile, record_function, ProfilerActivity
 
-from chess_util import board_to_binary, move_to_binary, MOVE_ENCODING_LENGTH, STARTING_POSITION_INPUT_ARRAY
+from chess_util import *
 from constants import Constants
 from dataset_manager import DatasetManager
 
@@ -89,7 +89,7 @@ class GameController:
         return random.randint(-1, 1)
 
     @staticmethod
-    def _get_player_best_move(player, all_moves_input_tensors, apply_best_activation=True):
+    def _get_player_best_move(player, all_moves_input_arr, apply_best_activation=True):
         """
         Given a list of tensors, activate the player with each tensor and return the index of the input that resulted
         in the most activated output.
@@ -98,14 +98,23 @@ class GameController:
         best_activation = -10000000
         best_move_idx = None
         best_internal_activations = old_internal_activations
-        for i in range(len(all_moves_input_tensors)):
-            input_tensor = all_moves_input_tensors[i]
-            output_result = player.activate(input_tensor)[0]
+        all_input_results = dict()
+        for i in range(len(all_moves_input_arr)):
+            input_arr = all_moves_input_arr[i]
+            output_result = player.activate(input_arr)[0]
+            all_input_results[i] = output_result
             if output_result > best_activation:
                 best_activation = output_result
                 best_move_idx = i
                 best_internal_activations = np.copy(player.activations)  # TODO do we need to be cloning here?
             player.activations = old_internal_activations
+
+        # # just for analysis, should be removed when doing a real run
+        # board_obj = [analyze_full_input_arr(x) for x in all_moves_input_arr][0][0]
+        # legal_moves_objs = [x for x in board_obj.legal_moves]
+        # legal_moves_evaluation = {legal_moves_objs[k]: v for k, v in all_input_results.items()}
+        # agent_best_move_uci = legal_moves_objs[best_move_idx]
+        # all_moves_agent_preference_arr = np.array([[x] for x in all_input_results.values()])
 
         if apply_best_activation:
             player.activations = best_internal_activations
@@ -151,13 +160,15 @@ class GameController:
                         model_input_tensor = np.array([int(c) for c in model_input_str], dtype=np.float)
                         all_moves_input_tensors.append(model_input_tensor)
                     correct_move_idx = [x.uci() for x in legal_moves_lst].index(correct_move)
-                    puzzle_inputs.append((all_moves_input_tensors, correct_move_idx))
+                    puzzle_inputs.append((np.array(all_moves_input_tensors), correct_move_idx))
 
                 # Apply the move to the board and switch if it is the players' turn or not
                 board.push_uci(moves[i])
                 is_player_turn = not is_player_turn
 
             all_puzzle_inputs.append((puzzle_inputs, difficulty))
+
+        # TODO add an input for the initial puzzle state and also for player_is_white
 
         return all_puzzle_inputs
 

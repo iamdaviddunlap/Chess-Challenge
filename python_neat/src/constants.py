@@ -11,10 +11,10 @@ class Constants:
     # outputs_count = 1
     min_val = -99.999
     max_val = 99.999
-    random_seed = 1
+    random_seed = 69
 
     # Chess Parameters
-    num_puzzles_per_game = 20
+    num_puzzles_per_game = 100
 
     # Parasites Settings
     num_hall_of_fame_parasites = 8

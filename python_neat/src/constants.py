@@ -4,14 +4,14 @@ class Constants:
 
 
     # General Parameters
-    population_size = 200
+    population_size = 100
     inputs_count = 284
     outputs_count = 1
     # inputs_count = 3
     # outputs_count = 1
     min_val = -99.999
     max_val = 99.999
-    random_seed = 69
+    random_seed = 6969
 
     # Chess Parameters
     num_puzzles_per_game = 100
@@ -49,7 +49,7 @@ class Constants:
     excess_coeff = 2.0
     gates_coeff = 1.0
     weight_coeff = 1.0
-    species_compat_thresh_initial = 4.5
+    species_compat_thresh_initial = 2.6
     species_compat_modifier = 0.3
     species_count_target = 10
 
@@ -62,7 +62,7 @@ class Constants:
     fitness_penalty_factor = 0.005
 
     # Breeding Settings
-    superchamp_offspring = 3
+    superchamp_offspring = 5
     killer_superchamp_z_score_req = 5.0
     killer_superchamp_percent = 0.4
     mutate_only_prob = 0.25

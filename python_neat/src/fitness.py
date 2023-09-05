@@ -91,7 +91,7 @@ class Fitness:
         organism_scores = dict()
 
         if Constants.half_power:
-            num_processes = 8
+            num_processes = 14
         else:
             num_processes = 16
         with Pool(processes=num_processes) as pool:

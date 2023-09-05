@@ -132,8 +132,8 @@ def load_population(population_folder):
 
 
 def main():
-    host_population_folder = 'saved_genomes/populations/host_gen29_2023-09-04__14-32-19'
-    parasite_population_folder = 'saved_genomes/populations/parasite_gen29_2023-09-04__14-32-22'
+    host_population_folder = 'saved_genomes/populations/hand_pruned_hosts_gen_29'
+    parasite_population_folder = 'saved_genomes/populations/hand_pruned_parasites_gen_29'
     hall_of_fame_folder = 'saved_genomes/hall_of_fame/hof_gen28_2023-09-04__14-32-18'
     starting_generation = 29
     # starting_generation = 1
@@ -246,11 +246,11 @@ def main():
         host_population.speciate()
         parasite_population.speciate()
 
-        if len(hall_of_fame) >= Constants.max_hof_size:
-            # Turning off pruning of the hall of fame for now
-            # hall_of_fame = prune_hall_of_fame(hall_of_fame, generation)
-            pass
-        elif generation % 1 == 0:
+        # if len(hall_of_fame) >= Constants.max_hof_size:
+        #     # Turning off pruning of the hall of fame for now
+        #     # hall_of_fame = prune_hall_of_fame(hall_of_fame, generation)
+        #     pass
+        if generation % 1 == 0:
             save_hall_of_fame(hall_of_fame, generation)
             save_population(host_population, generation+1, is_host=True)
             save_population(parasite_population, generation+1, is_host=False)

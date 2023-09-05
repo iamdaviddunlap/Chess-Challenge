@@ -122,7 +122,7 @@ class Population:
             total_avg_fitness += avg_fitness
 
         # Add some completely random children
-        num_random_children = 5
+        num_random_children = 0  # NOTE: turning this off for now
         max_mutations = 20
         for i in range(num_random_children):
             genome = Genome()
@@ -135,15 +135,17 @@ class Population:
         # Find the "superchamp"
         super_champ = self.get_superchamp()
 
+        # NOTE: removing code to create many more clones of the superchamp if the z-score was very high
+        # pop_fitnesses = [o.fitness for o in self.organisms]
+        # super_champ_z_score = (super_champ.fitness - statistics.mean(pop_fitnesses)) / statistics.stdev(pop_fitnesses)
+        # print(f"super_champ_z_score: {super_champ_z_score}")
+        # if super_champ_z_score >= Constants.killer_superchamp_z_score_req:
+        #     super_champ_offspring = int(Constants.population_size * Constants.killer_superchamp_percent)
+        # else:
+        #     super_champ_offspring = Constants.superchamp_offspring
+
         # Create special clones from super champ
-        pop_fitnesses = [o.fitness for o in self.organisms]
-        super_champ_z_score = (super_champ.fitness - statistics.mean(pop_fitnesses)) / statistics.stdev(pop_fitnesses)
-        print(f"super_champ_z_score: {super_champ_z_score}")
-        if super_champ_z_score >= Constants.killer_superchamp_z_score_req:
-            super_champ_offspring = int(Constants.population_size * Constants.killer_superchamp_percent)
-        else:
-            super_champ_offspring = Constants.superchamp_offspring
-        for i in range(super_champ_offspring):
+        for i in range(Constants.superchamp_offspring):
             new_superchamp_genome = super_champ.genome.clone()
             Mutation.mutate_weights(new_superchamp_genome, weight_perturb_value_mod=0.4)
             new_superchamp_child = Organism(new_superchamp_genome)

@@ -59,7 +59,7 @@ class Constants:
     fitness_reward_loss = 0.0
     fitness_penalty_factor_conn_count = 0.7
     fitness_penalty_factor_node_count = 0.3
-    fitness_penalty_factor = 5e-5  # Used to be 5e-3
+    fitness_penalty_factor = 5e-3  # Used to be 5e-3
 
     # Breeding Settings
     superchamp_offspring = 5

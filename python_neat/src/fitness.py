@@ -86,7 +86,7 @@ class Fitness:
 
     @staticmethod
     def evaluate_fitness_chess_puzzles_singleplayer_async(organisms):
-        chess_puzzles_inputs = GameController.get_chess_puzzles_inputs(device="cpu")
+        chess_puzzles_inputs = GameController.get_chess_puzzles_inputs()
         input_args = [(o, chess_puzzles_inputs) for o in organisms]
         organism_scores = dict()
 

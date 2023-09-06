@@ -130,7 +130,7 @@ class GameController:
 
 
     @staticmethod
-    def get_chess_puzzles_inputs(device="cpu"):
+    def get_chess_puzzles_inputs():
         # Get the (newly shuffled) puzzles dataset and clip to the number of puzzles we're evaluating per game
         puzzles_dataset = DatasetManager().get_chess_puzzle_dataset()
         puzzles_dataset = puzzles_dataset[:Constants.num_puzzles_per_game]
@@ -144,6 +144,12 @@ class GameController:
 
             board = chess.Board(fen=fen)
 
+            puzzle_initial_input = board_to_binary(board) + ''.join(['0']*MOVE_ENCODING_LENGTH)
+            # Swap the first character: 1 <-> 0 (we do this because the active player is NOT the puzzle player)
+            puzzle_initial_input = puzzle_initial_input[0].replace("1", "a").replace("0", "1").replace("a", "0") + \
+                                   puzzle_initial_input[1:]
+            puzzle_initial_input = np.array([int(c) for c in puzzle_initial_input], dtype=np.float)
+
             puzzle_inputs = []
 
             is_player_turn = False
@@ -153,22 +159,21 @@ class GameController:
                     binary_board_string = board_to_binary(board)
 
                     # Create the input tensors for all legal moves
-                    all_moves_input_tensors = []
+                    all_moves_input_arr = []
                     legal_moves_lst = [x for x in board.legal_moves]
                     for potential_move in legal_moves_lst:
                         model_input_str = binary_board_string + move_to_binary(potential_move, board)
                         model_input_tensor = np.array([int(c) for c in model_input_str], dtype=np.float)
-                        all_moves_input_tensors.append(model_input_tensor)
+                        all_moves_input_arr.append(model_input_tensor)
+
                     correct_move_idx = [x.uci() for x in legal_moves_lst].index(correct_move)
-                    puzzle_inputs.append((np.array(all_moves_input_tensors), correct_move_idx))
+                    puzzle_inputs.append((np.array(all_moves_input_arr), correct_move_idx))
 
                 # Apply the move to the board and switch if it is the players' turn or not
                 board.push_uci(moves[i])
                 is_player_turn = not is_player_turn
 
-            all_puzzle_inputs.append((puzzle_inputs, difficulty))
-
-        # TODO add an input for the initial puzzle state and also for player_is_white
+            all_puzzle_inputs.append((puzzle_initial_input, puzzle_inputs, difficulty))
 
         return all_puzzle_inputs
 
@@ -181,8 +186,8 @@ class GameController:
         player.to_device(device)
         total_score = 0
         for puzzle_tup in chess_puzzles_inputs:
-            puzzle_lst, difficulty = puzzle_tup
-            player.activate(STARTING_POSITION_INPUT_ARRAY)
+            puzzle_initial_input, puzzle_lst, difficulty = puzzle_tup
+            player.activate(puzzle_initial_input)
             total_correct_moves = 0
             for moves_tuple in puzzle_lst:
                 moves_input_tensors, correct_idx = moves_tuple
@@ -194,7 +199,7 @@ class GameController:
                 else:
                     break
             player.reset_state()
-            target_correct_moves = float(len(puzzle_tup[0]))
+            target_correct_moves = float(len(puzzle_lst))
             player_ratio = total_correct_moves / target_correct_moves
             total_score += player_ratio * difficulty
         return organism_id, total_score

@@ -5,7 +5,7 @@ class Constants:
 
     # General Parameters
     population_size = 100
-    inputs_count = 284
+    inputs_count = 285
     outputs_count = 1
     # inputs_count = 3
     # outputs_count = 1
@@ -55,11 +55,11 @@ class Constants:
 
     # Fitness Settings
     fitness_reward_win = 2.0
-    fitness_reward_draw = -1.0
+    fitness_reward_draw = 1.0
     fitness_reward_loss = 0.0
     fitness_penalty_factor_conn_count = 0.7
     fitness_penalty_factor_node_count = 0.3
-    fitness_penalty_factor = 0.005
+    fitness_penalty_factor = 5e-5  # Used to be 5e-3
 
     # Breeding Settings
     superchamp_offspring = 5

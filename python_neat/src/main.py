@@ -117,7 +117,9 @@ def load_population(population_folder):
                 json_data = json.loads(f.read())
             loaded_genome = json_to_genome(json_data)
             # Extract organism_id and fitness from the filename
-            organism_id, fitness = [int(x) for x in filename.split('.')[0].split('_')]
+            organism_id, fitness = [x for x in '.'.join(filename.split('.')[:-1]).split('_')]
+            organism_id = int(organism_id)
+            fitness = float(fitness)
             new_organism = Organism(loaded_genome, organism_id=organism_id)
             new_organism.fitness = fitness
             population_organisms.append(new_organism)
@@ -127,6 +129,16 @@ def load_population(population_folder):
         pop_metadata = json.loads(f.read())
     population._cur_species_id = pop_metadata["_cur_species_id"]
     population._species_compat_thresh = pop_metadata["_species_compat_thresh"]
+
+    InnovationHandler()._curOrganismId = max(InnovationHandler()._curOrganismId,
+                                             max([x.organism_id for x in population.organisms]) + 1)
+    InnovationHandler()._curNodeId = max(InnovationHandler()._curNodeId,
+                                         max({node_id for o in population.organisms
+                                              for node_id in [n.node_id for n in o.genome.nodes]}) + 1)
+    InnovationHandler()._curConnectionId = max(InnovationHandler()._curConnectionId,
+                                               max({conn_id for o in population.organisms
+                                                    for conn_id in
+                                                    [c.connection_id for c in o.genome.connections]}) + 1)
 
     return population
 
@@ -147,27 +159,11 @@ def main():
         host_population = Population()
     else:
         host_population = load_population(host_population_folder)
-        InnovationHandler()._curOrganismId = max(InnovationHandler()._curOrganismId,
-                                                 max([x.organism_id for x in host_population.organisms])+1)
-        InnovationHandler()._curNodeId = max(InnovationHandler()._curNodeId,
-                                                 max({node_id for o in host_population.organisms
-                                                      for node_id in [n.node_id for n in o.genome.nodes]})+1)
-        InnovationHandler()._curConnectionId = max(InnovationHandler()._curConnectionId,
-                                                   max({conn_id for o in host_population.organisms
-                                                       for conn_id in [c.connection_id for c in o.genome.connections]})+1)
 
     if parasite_population_folder is None:
         parasite_population = Population()
     else:
         parasite_population = load_population(parasite_population_folder)
-        InnovationHandler()._curOrganismId = max(InnovationHandler()._curOrganismId,
-                                                 max([x.organism_id for x in parasite_population.organisms])+1)
-        InnovationHandler()._curNodeId = max(InnovationHandler()._curNodeId,
-                                                 max({node_id for o in parasite_population.organisms
-                                                      for node_id in [n.node_id for n in o.genome.nodes]})+1)
-        InnovationHandler()._curConnectionId = max(InnovationHandler()._curConnectionId,
-                                                   max({conn_id for o in parasite_population.organisms
-                                                       for conn_id in [c.connection_id for c in o.genome.connections]})+1)
 
     if hall_of_fame_folder is None:
         hall_of_fame = []

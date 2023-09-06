@@ -2,15 +2,14 @@ import chess
 import numpy as np
 import random
 
-BOARD_ENCODING_LENGTH = 256
+BOARD_ENCODING_LENGTH = 257
 MOVE_ENCODING_LENGTH = 28
 TOTAL_ENCODING_LENGTH = BOARD_ENCODING_LENGTH + MOVE_ENCODING_LENGTH
-STARTING_POSITION_INPUT_ARRAY = np.array([[1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
-                                         dtype=np.float)
 
 
 def board_to_binary(board):
-    binary_representation_str = ''
+    player_color_bit = '1' if board.turn else '0'
+    binary_representation_str = player_color_bit
 
     for square in range(64):
         piece = board.piece_at(square)
@@ -121,6 +120,7 @@ def analyze_full_input_arr(input_np_arr):
 
 
 def binary_board_to_ascii_board(binary_str):
+    binary_str = binary_str[1:]  # Chop off first bit of the string (represents the active player's color)
     # Initialize an empty board in ASCII format
     ascii_board = [[' ' for _ in range(8)] for _ in range(8)]
 
@@ -162,6 +162,9 @@ def binary_board_to_chess_board(binary_str):
     # Initialize an empty chess board
     board = chess.Board(fen=None)
 
+    player_is_white = binary_str[0] == '1'
+    binary_str = binary_str[1:]
+
     # Piece lookup table
     piece_lookup = {
         '001': chess.PAWN,
@@ -190,6 +193,7 @@ def binary_board_to_chess_board(binary_str):
             # Place the piece on the board
             board.set_piece_at(square, piece)
 
+    board.turn = player_is_white
     return board
 
 

@@ -72,16 +72,19 @@ def json_to_genome(genome_data):
 
 
 if __name__ == '__main__':
+    from game_controller import GameController
     from dataset_manager import DatasetManager
     from constants import Constants
     # org_id_to_load = 7998
     # with open(f'saved_genomes/xor_solutions_2/{org_id_to_load}.json') as f:
-    org_id_to_load = '6805_1.0'
-    with open(f'saved_genomes/populations/host_gen18_2023-09-03__18-25-04/{org_id_to_load}.json') as f:
+    org_id_to_load = '12673'
+    with open(f'saved_genomes/hall_of_fame/new_modded_hof_gen36/{org_id_to_load}.json') as f:
         json_data = json.loads(f.read())
     loaded_genome = json_to_genome(json_data)
     visualize_genome(loaded_genome)
 
+    chess_puzzles_inputs = GameController.get_chess_puzzles_inputs()
+    GameController.play_chess_puzzles_singleplayer((loaded_genome, chess_puzzles_inputs))
     # dataset = DatasetManager().concentric_circle_dataset()
     # for item in dataset:
     #     # Separating inputs and correct outputs based on Constants.outputs_count

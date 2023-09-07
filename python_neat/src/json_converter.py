@@ -78,8 +78,8 @@ if __name__ == '__main__':
     from constants import Constants
     # org_id_to_load = 7998
     # with open(f'saved_genomes/xor_solutions_2/{org_id_to_load}.json') as f:
-    org_id_to_load = '12673'
-    with open(f'saved_genomes/hall_of_fame/new_modded_hof_gen36/{org_id_to_load}.json') as f:
+    org_id_to_load = '14108'
+    with open(f'saved_genomes/hall_of_fame/hof_gen42_2023-09-06__20-21-39/{org_id_to_load}.json') as f:
         json_data = json.loads(f.read())
     loaded_genome = json_to_genome(json_data)
     loaded_organism = Organism(loaded_genome)

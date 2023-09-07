@@ -89,7 +89,7 @@ class GameController:
         return random.randint(-1, 1)
 
     @staticmethod
-    def _get_player_best_move(player, all_moves_input_arr, apply_best_activation=True):
+    def get_player_best_move(player, all_moves_input_arr, calculate_full_preference=False, apply_best_activation=True):
         """
         Given a list of tensors, activate the player with each tensor and return the index of the input that resulted
         in the most activated output.
@@ -109,15 +109,17 @@ class GameController:
                 best_internal_activations = np.copy(player.activations)  # TODO do we need to be cloning here?
             player.activations = old_internal_activations
 
-        # # just for analysis, should be removed when doing a real run
-        # board_obj = [analyze_full_input_arr(x) for x in all_moves_input_arr][0][0]
-        # legal_moves_objs = [x for x in board_obj.legal_moves]
-        # legal_moves_evaluation = {legal_moves_objs[k]: v for k, v in all_input_results.items()}
-        # agent_best_move_uci = legal_moves_objs[best_move_idx]
-        # all_moves_agent_preference_arr = np.array([[x] for x in all_input_results.values()])
-
         if apply_best_activation:
             player.activations = best_internal_activations
+
+        if calculate_full_preference:
+            board_obj = [analyze_full_input_arr(x) for x in all_moves_input_arr][0][0]
+            legal_moves_objs = [x for x in board_obj.legal_moves]
+            agent_best_move_uci = legal_moves_objs[best_move_idx]
+            legal_moves_evaluation = {legal_moves_objs[k]: v for k, v in all_input_results.items()}
+            all_moves_agent_preference_arr = np.array([[x] for x in all_input_results.values()])
+            return agent_best_move_uci, legal_moves_evaluation, all_moves_agent_preference_arr
+
         return best_move_idx, best_internal_activations
 
     @staticmethod
@@ -127,6 +129,18 @@ class GameController:
         player2_id, player2_score = GameController.play_chess_puzzles_singleplayer((player2, chess_puzzles_inputs))
         print(f"In play_chess_puzzles, player1_score: {player1_score}, player2_score: {player2_score}")
         return GameController.scores_to_int(player1_score, player2_score, one_if_player1_is_bigger=True)
+
+
+    @staticmethod
+    def get_model_input_arrs_from_board(board):
+        binary_board_string = board_to_binary(board)
+        all_moves_input_arr = []
+        legal_moves_lst = [x for x in board.legal_moves]
+        for potential_move in legal_moves_lst:
+            model_input_str = binary_board_string + move_to_binary(potential_move, board)
+            model_input_tensor = np.array([int(c) for c in model_input_str], dtype=float)
+            all_moves_input_arr.append(model_input_tensor)
+        return all_moves_input_arr
 
 
     @staticmethod
@@ -148,7 +162,7 @@ class GameController:
             # Swap the first character: 1 <-> 0 (we do this because the active player is NOT the puzzle player)
             puzzle_initial_input = puzzle_initial_input[0].replace("1", "a").replace("0", "1").replace("a", "0") + \
                                    puzzle_initial_input[1:]
-            puzzle_initial_input = np.array([int(c) for c in puzzle_initial_input], dtype=np.float)
+            puzzle_initial_input = np.array([int(c) for c in puzzle_initial_input], dtype=float)
 
             puzzle_inputs = []
 
@@ -156,16 +170,10 @@ class GameController:
             for i in range(len(moves)):
                 if is_player_turn:
                     correct_move = moves[i]
-                    binary_board_string = board_to_binary(board)
 
-                    # Create the input tensors for all legal moves
-                    all_moves_input_arr = []
+                    all_moves_input_arr = GameController.get_model_input_arrs_from_board(board)
+
                     legal_moves_lst = [x for x in board.legal_moves]
-                    for potential_move in legal_moves_lst:
-                        model_input_str = binary_board_string + move_to_binary(potential_move, board)
-                        model_input_tensor = np.array([int(c) for c in model_input_str], dtype=np.float)
-                        all_moves_input_arr.append(model_input_tensor)
-
                     correct_move_idx = [x.uci() for x in legal_moves_lst].index(correct_move)
                     puzzle_inputs.append((np.array(all_moves_input_arr), correct_move_idx))
 
@@ -191,7 +199,7 @@ class GameController:
             total_correct_moves = 0
             for moves_tuple in puzzle_lst:
                 moves_input_tensors, correct_idx = moves_tuple
-                best_move_idx, best_internal_activations = GameController._get_player_best_move(
+                best_move_idx, best_internal_activations = GameController.get_player_best_move(
                     player, moves_input_tensors, apply_best_activation=False)
                 if best_move_idx == correct_idx:
                     total_correct_moves += 1

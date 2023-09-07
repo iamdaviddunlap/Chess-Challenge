@@ -18,7 +18,7 @@ class DatasetManager:
     def xor_dataset(self, device="cpu"):
         if self._xor_dataset is not None:
             np.random.shuffle(self._xor_dataset)
-            return np.array(self._xor_dataset, dtype=np.float)
+            return np.array(self._xor_dataset, dtype=float)
 
         self._xor_dataset = np.array([
             [0, 0, 1, 0],
@@ -28,12 +28,12 @@ class DatasetManager:
         ])
 
         np.random.shuffle(self._xor_dataset)
-        return np.array(self._xor_dataset, dtype=np.float)
+        return np.array(self._xor_dataset, dtype=float)
 
     def concentric_circle_dataset(self, device="cpu", n_points=50, noise=0.1):
         if self._concentric_circle_dataset is not None:
             np.random.shuffle(self._concentric_circle_dataset)
-            return np.array(self._concentric_circle_dataset, dtype=np.float)
+            return np.array(self._concentric_circle_dataset, dtype=float)
 
         theta = np.linspace(0, 2 * np.pi, n_points)
         r_inner = 1
@@ -63,7 +63,7 @@ class DatasetManager:
         self._concentric_circle_dataset = np.column_stack((X, y))
         np.random.shuffle(self._concentric_circle_dataset)
 
-        return np.array(self._concentric_circle_dataset, dtype=np.float)
+        return np.array(self._concentric_circle_dataset, dtype=float)
 
     def get_chess_puzzle_dataset(self):
         raw_dataset_filename = 'datasets/lichess_db_puzzle_raw.csv'

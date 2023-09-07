@@ -307,7 +307,7 @@ class Genome:
                 gates_mask = self.gates_mask[:, phen_id]
                 incoming_activations = self.connection_matrix[:, phen_id, 0] * new_activations
                 incoming_activations[gates_mask] *= new_activations[
-                    self.connection_matrix[:, phen_id, 1][gates_mask].astype(np.long)]
+                    self.connection_matrix[:, phen_id, 1][gates_mask].astype(np.longlong)]
                 incoming_activation = np.sum(incoming_activations)
                 new_activation = new_activations[phen_id] + incoming_activation + node.bias
                 new_activation = np.clip(new_activation, -1e12, 1e12)

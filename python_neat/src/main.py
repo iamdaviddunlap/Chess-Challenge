@@ -147,7 +147,7 @@ def main():
     host_population_folder = 'saved_genomes/populations/new_modded_hosts_gen37'
     parasite_population_folder = 'saved_genomes/populations/new_modded_parasites_gen37'
     hall_of_fame_folder = 'saved_genomes/hall_of_fame/new_modded_hof_gen36'
-    starting_generation = 29
+    starting_generation = 37
     # starting_generation = 1
     # host_population_folder = None
     # parasite_population_folder = None

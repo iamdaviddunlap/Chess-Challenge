@@ -144,10 +144,10 @@ def load_population(population_folder):
 
 
 def main():
-    host_population_folder = 'saved_genomes/populations/new_modded_hosts_gen37'
-    parasite_population_folder = 'saved_genomes/populations/new_modded_parasites_gen37'
-    hall_of_fame_folder = 'saved_genomes/hall_of_fame/new_modded_hof_gen36'
-    starting_generation = 37
+    host_population_folder = 'saved_genomes/populations/host_gen45_2023-09-07__01-57-52'
+    parasite_population_folder = 'saved_genomes/populations/parasite_gen45_2023-09-07__01-57-54'
+    hall_of_fame_folder = 'saved_genomes/hall_of_fame/hof_gen44_2023-09-07__01-57-52'
+    starting_generation = 45
     # starting_generation = 1
     # host_population_folder = None
     # parasite_population_folder = None
@@ -201,7 +201,7 @@ def main():
 
 
         # Calculate fitnesses for the organisms in each population
-        penalize_size = False
+        penalize_size = True
         Fitness.assign_fitnesses(host_population, all_host_results, penalize_size)
         Fitness.assign_fitnesses(parasite_population, all_parasite_results, penalize_size)
 

@@ -113,10 +113,9 @@ class GameController:
             player.activations = best_internal_activations
 
         if calculate_full_preference:
-            board_obj = [analyze_full_input_arr(x) for x in all_moves_input_arr][0][0]
-            legal_moves_objs = [x for x in board_obj.legal_moves]
-            agent_best_move_uci = legal_moves_objs[best_move_idx]
-            legal_moves_evaluation = {legal_moves_objs[k]: v for k, v in all_input_results.items()}
+            legal_moves_uci_strs = [analyze_full_input_arr(x)[1]['move_uci'] for x in all_moves_input_arr]
+            agent_best_move_uci = legal_moves_uci_strs[best_move_idx]
+            legal_moves_evaluation = {legal_moves_uci_strs[k]: v for k, v in all_input_results.items()}
             all_moves_agent_preference_arr = np.array([[x] for x in all_input_results.values()])
             return agent_best_move_uci, legal_moves_evaluation, all_moves_agent_preference_arr
 

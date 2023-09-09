@@ -1,18 +1,11 @@
-from concurrent.futures import ProcessPoolExecutor
-from collections import defaultdict
-from tqdm import tqdm
 import time
 import os
 import random
 import json
-from multiprocessing import Pool
-from itertools import combinations
 
 from visualize import visualize_genome
 from json_converter import genome_to_json, json_to_genome
 from organism import Organism
-from genome import Genome
-from mutation_handler import Mutation
 from population import Population
 from fitness import Fitness
 from dataset_manager import DatasetManager
@@ -69,45 +62,6 @@ def save_population(population, generation, is_host):
         json.dump(population.get_metadata_dict(), json_file, indent=4)
 
 
-# def prune_hall_of_fame(hall_of_fame, generation):
-#     print('++++++++++++++++++++++++++++')
-#     print('Pruning hall of fame...')
-#     # Step 1: Prepare arguments
-#     organisms = hall_of_fame
-#     champions = hall_of_fame
-#     challengers_for_parasites = []  # Empty because we're only interested in hall_of_fame vs. hall_of_fame
-#     precalc_results = None  # No precalculated results
-#
-#     # TODO IMPORTANT fix prune hall of fame for chess
-#
-#     # Step 2: Call evaluate_fitness_async
-#     all_results, _ = Fitness.evaluate_fitness_chess_puzzles_singleplayer_async(
-#         organisms=organisms,
-#         champions=champions,
-#         challengers_for_parasites=challengers_for_parasites,
-#         precalc_results=precalc_results,
-#         one_way=True)
-#
-#     # Step 3: Analyze results to get top_n organisms
-#     # Initialize a dictionary to hold the sum of game results for each organism
-#     sum_results = {organism.organism_id: 0 for organism in hall_of_fame}
-#
-#     for (org1_id, org2_id, _), result in all_results.items():
-#         sum_results[org1_id] += result
-#         sum_results[org2_id] -= result  # Assuming that a positive result is good for org1 and bad for org2
-#
-#     # Sort the organisms by their summed game results
-#     sorted_organisms = sorted(hall_of_fame, key=lambda x: sum_results[x.organism_id], reverse=True)
-#
-#     # Keep only the top_n organisms
-#     pruned_hall_of_fame = sorted_organisms[:Constants.min_reduced_hof_size]
-#
-#     save_hall_of_fame(pruned_hall_of_fame, generation, pruned=True)
-#
-#     print('++++++++++++++++++++++++++++')
-#     return pruned_hall_of_fame
-
-
 def load_population(population_folder):
     population_organisms = []
     metadata_filename = "pop_metadata.json"
@@ -146,7 +100,7 @@ def load_population(population_folder):
 def main():
     host_population_folder = 'saved_genomes/populations/host_gen45_2023-09-07__01-57-52'
     parasite_population_folder = 'saved_genomes/populations/parasite_gen45_2023-09-07__01-57-54'
-    hall_of_fame_folder = 'saved_genomes/hall_of_fame/hof_gen44_2023-09-07__01-57-52'
+    hall_of_fame_folder = 'saved_genomes/hall_of_fame/new_modded_hof_gen44'
     starting_generation = 45
     # starting_generation = 1
     # host_population_folder = None
@@ -174,31 +128,32 @@ def main():
     for generation in range(starting_generation, max_generations+1):
         gen_start_time = time.time()
 
-        hof_challengers = random.sample(
-            hall_of_fame, k=min(len(hall_of_fame), 10))
+        if Constants.is_labeled_non_chess_dataset:
+            challengers_for_hosts = parasite_population.select_challengers(hall_of_fame)
+            challengers_for_parasites = host_population.select_challengers(hall_of_fame)
+            all_host_results, parasite_precalc_results = Fitness.evaluate_fitness_adversarial_async(
+                organisms=host_population.organisms,
+                champions=challengers_for_hosts,
+                challengers_for_parasites=challengers_for_parasites)
 
-        all_scores = Fitness.evaluate_fitness_chess_puzzles_singleplayer_async(
-            organisms=host_population.organisms+parasite_population.organisms+hof_challengers)
+            all_parasite_results, _ = Fitness.evaluate_fitness_adversarial_async(
+                organisms=parasite_population.organisms,
+                champions=challengers_for_parasites,
+                challengers_for_parasites=challengers_for_hosts,
+                precalc_results=parasite_precalc_results)
+        else:
+            hof_challengers = random.sample(
+                hall_of_fame, k=min(len(hall_of_fame), 10))
 
-        all_host_results = Fitness.convert_player_scores_to_results_dict(host_population.organisms,
-                                                                         parasite_population.organisms+hof_challengers,
-                                                                         all_scores)
-        all_parasite_results = Fitness.convert_player_scores_to_results_dict(parasite_population.organisms,
-                                                                             host_population.organisms+hof_challengers,
+            all_scores = Fitness.evaluate_fitness_chess_puzzles_singleplayer_async(
+                organisms=host_population.organisms+parasite_population.organisms+hof_challengers)
+
+            all_host_results = Fitness.convert_player_scores_to_results_dict(host_population.organisms,
+                                                                             parasite_population.organisms+hof_challengers,
                                                                              all_scores)
-
-        # # XOR fitness calculation
-        # all_host_results, parasite_precalc_results = Fitness.evaluate_fitness_adversarial_async(
-        #     organisms=host_population.organisms,
-        #     champions=challengers_for_hosts,
-        #     challengers_for_parasites=challengers_for_parasites)
-        #
-        # all_parasite_results, _ = Fitness.evaluate_fitness_adversarial_async(
-        #     organisms=parasite_population.organisms,
-        #     champions=challengers_for_parasites,
-        #     challengers_for_parasites=challengers_for_hosts,
-        #     precalc_results=parasite_precalc_results)
-
+            all_parasite_results = Fitness.convert_player_scores_to_results_dict(parasite_population.organisms,
+                                                                                 host_population.organisms+hof_challengers,
+                                                                                 all_scores)
 
         # Calculate fitnesses for the organisms in each population
         penalize_size = True
@@ -209,12 +164,12 @@ def main():
         host_champ = host_population.get_superchamp()
         parasite_champ = parasite_population.get_superchamp()
 
-        # # Calculate exact loss (NOTE: this cannot be done without labeled dataset)
-        # dataset = DatasetManager().xor_dataset()
-        # host_loss = GameController.play_labeled_dataset_single_player(host_champ, dataset)
-        # parasite_loss = GameController.play_labeled_dataset_single_player(parasite_champ, dataset)
-        # print(f"Generation {generation}: host champion loss: {host_loss}")
-        # print(f"Generation {generation}: parasite champion loss: {parasite_loss}")
+        if Constants.is_labeled_non_chess_dataset:
+            dataset = DatasetManager().xor_dataset()
+            host_loss = GameController.play_labeled_dataset_single_player(host_champ, dataset)
+            parasite_loss = GameController.play_labeled_dataset_single_player(parasite_champ, dataset)
+            print(f"Generation {generation}: host champion loss: {host_loss}")
+            print(f"Generation {generation}: parasite champion loss: {parasite_loss}")
 
         host_white_result = GameController.play_game(host_champ, parasite_champ, host_is_white=True)
         host_black_result = GameController.play_game(host_champ, parasite_champ, host_is_white=False)
@@ -242,10 +197,6 @@ def main():
         host_population.speciate()
         parasite_population.speciate()
 
-        # if len(hall_of_fame) >= Constants.max_hof_size:
-        #     # Turning off pruning of the hall of fame for now
-        #     # hall_of_fame = prune_hall_of_fame(hall_of_fame, generation)
-        #     pass
         if generation % 1 == 0:
             save_hall_of_fame(hall_of_fame, generation)
             save_population(host_population, generation+1, is_host=True)

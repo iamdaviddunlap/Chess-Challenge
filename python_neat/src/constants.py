@@ -11,7 +11,10 @@ class Constants:
     # outputs_count = 1
     min_val = -99.999
     max_val = 99.999
-    random_seed = 6969
+    random_seed = 420420
+
+    # Training Parameters
+    is_labeled_non_chess_dataset = False
 
     # Chess Parameters
     num_puzzles_per_game = 100

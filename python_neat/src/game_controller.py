@@ -143,10 +143,11 @@ class GameController:
 
 
     @staticmethod
-    def get_chess_puzzles_inputs():
-        # Get the (newly shuffled) puzzles dataset and clip to the number of puzzles we're evaluating per game
-        puzzles_dataset = DatasetManager().get_chess_puzzle_dataset()
-        puzzles_dataset = puzzles_dataset[:Constants.num_puzzles_per_game]
+    def get_chess_puzzles_inputs(puzzles_dataset=None):
+        if puzzles_dataset is None:
+            # Get the (newly shuffled) puzzles dataset and clip to the number of puzzles we're evaluating per game
+            puzzles_dataset = DatasetManager().get_chess_puzzle_dataset()
+            puzzles_dataset = puzzles_dataset[:Constants.num_puzzles_per_game]
 
         all_puzzle_inputs = []
         for _, puzzle in puzzles_dataset.iterrows():
@@ -186,13 +187,14 @@ class GameController:
 
     @staticmethod
     def play_chess_puzzles_singleplayer(args, device="cpu"):
-        player, chess_puzzles_inputs = args
+        player, chess_puzzles_inputs, return_total_score = args
         organism_id = player.organism_id
         player = player.genome
         player.reset_state()
         player.to_device(device)
         total_score = 0
-        for puzzle_tup in chess_puzzles_inputs:
+        puzzle_scores = {}
+        for idx, puzzle_tup in enumerate(chess_puzzles_inputs):
             puzzle_initial_input, puzzle_lst, difficulty = puzzle_tup
             player.activate(puzzle_initial_input)
             total_correct_moves = 0
@@ -209,4 +211,11 @@ class GameController:
             target_correct_moves = float(len(puzzle_lst))
             player_ratio = total_correct_moves / target_correct_moves
             total_score += player_ratio * difficulty
-        return organism_id, total_score
+            if return_total_score:
+                total_score += player_ratio * difficulty
+            else:
+                puzzle_scores[idx] = player_ratio
+        if return_total_score:
+            return organism_id, total_score
+        else:
+            return organism_id, puzzle_scores

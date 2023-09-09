@@ -85,9 +85,11 @@ class Fitness:
         return result_dict
 
     @staticmethod
-    def evaluate_fitness_chess_puzzles_singleplayer_async(organisms):
-        chess_puzzles_inputs = GameController.get_chess_puzzles_inputs()
-        input_args = [(o, chess_puzzles_inputs) for o in organisms]
+    def evaluate_fitness_chess_puzzles_singleplayer_async(organisms, chess_puzzles_inputs=None):
+        if chess_puzzles_inputs is None:
+            chess_puzzles_inputs = GameController.get_chess_puzzles_inputs()
+
+        input_args = [(o, chess_puzzles_inputs, True) for o in organisms]
         organism_scores = dict()
 
         if Constants.half_power:
@@ -100,6 +102,26 @@ class Fitness:
 
         print(organism_scores)
         return organism_scores
+
+    @staticmethod
+    def evaluate_average_puzzle_score_async(organisms, chess_puzzles_inputs):
+        input_args = [(o, chess_puzzles_inputs, False) for o in organisms]
+        puzzle_scores_accumulated = {i: 0 for i in range(len(chess_puzzles_inputs))}
+
+        if Constants.half_power:
+            num_processes = 14
+        else:
+            num_processes = 16
+        with Pool(processes=num_processes) as pool:
+            for organism_id, puzzle_scores in tqdm(pool.imap(GameController.play_chess_puzzles_singleplayer, input_args), total=len(input_args)):
+                for puzzle_idx, score in puzzle_scores.items():
+                    puzzle_scores_accumulated[puzzle_idx] += score
+
+        average_puzzle_scores = {}
+        for puzzle_idx in puzzle_scores_accumulated:
+            average_puzzle_scores[puzzle_idx] = puzzle_scores_accumulated[puzzle_idx] / len(organisms)
+
+        return average_puzzle_scores
 
     @staticmethod
     def convert_game_result_to_fitness(result):

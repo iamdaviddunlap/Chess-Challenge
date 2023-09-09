@@ -2,6 +2,8 @@ import time
 import os
 import random
 import json
+import numpy as np
+import pandas as pd
 
 from visualize import visualize_genome
 from json_converter import genome_to_json, json_to_genome
@@ -97,6 +99,39 @@ def load_population(population_folder):
     return population
 
 
+def get_puzzles_inputs_for_next_generation(organisms):
+    num_hard_puzzles = 75
+    num_random_puzzles = 25
+    num_puzzles_to_play = 500
+
+    # Get a large dataset of chess puzzles for the organisms to play
+    puzzles_dataset = DatasetManager().get_chess_puzzle_dataset(keep_puzzle_id=True)
+    puzzles_dataset = puzzles_dataset[:num_puzzles_to_play]
+    puzzles_dataset.reset_index(inplace=True, drop=True)
+    chess_puzzles_inputs = GameController.get_chess_puzzles_inputs(puzzles_dataset)
+
+    # Calculate the average score from all organisms for each puzzle
+    puzzle_scores = Fitness.evaluate_average_puzzle_score_async(
+                organisms=organisms,
+                chess_puzzles_inputs=chess_puzzles_inputs)
+    puzzle_id_scores = {puzzles_dataset['PuzzleId'].iloc[k]: v for k, v in puzzle_scores.items()}
+    print(f'Puzzle scores: {puzzle_id_scores}')
+
+    # Selecting the num_hard_puzzles puzzles that had the lowest average score
+    n_hardest_puzzles_idxs = [k for k, v in sorted(puzzle_scores.items(), key=lambda x: x[1])[:num_hard_puzzles]]
+    selected_df = puzzles_dataset.iloc[n_hardest_puzzles_idxs]
+
+    # Selecting num_random_puzzles more rows randomly from the remaining rows
+    remaining_idxs = puzzles_dataset.index.difference(n_hardest_puzzles_idxs).to_list()
+    random_rows = puzzles_dataset.iloc[np.random.choice(remaining_idxs, num_random_puzzles, replace=False)]
+
+    puzzles_dataset = pd.concat([selected_df, random_rows])
+    print(f'puzzle_ids for next generation: {list(puzzles_dataset["PuzzleId"])}')
+
+    chess_puzzles_inputs = GameController.get_chess_puzzles_inputs(puzzles_dataset=puzzles_dataset)
+    return chess_puzzles_inputs
+
+
 def main():
     host_population_folder = 'saved_genomes/populations/host_gen45_2023-09-07__01-57-52'
     parasite_population_folder = 'saved_genomes/populations/parasite_gen45_2023-09-07__01-57-54'
@@ -107,6 +142,7 @@ def main():
     # parasite_population_folder = None
     # hall_of_fame_folder = None
     max_generations = 500
+    chess_puzzles_inputs = None
 
     # Initialization
     if host_population_folder is None:
@@ -142,11 +178,15 @@ def main():
                 challengers_for_parasites=challengers_for_hosts,
                 precalc_results=parasite_precalc_results)
         else:
+            if chess_puzzles_inputs is None:
+                chess_puzzles_inputs = GameController.get_chess_puzzles_inputs()
+
             hof_challengers = random.sample(
                 hall_of_fame, k=min(len(hall_of_fame), 10))
 
             all_scores = Fitness.evaluate_fitness_chess_puzzles_singleplayer_async(
-                organisms=host_population.organisms+parasite_population.organisms+hof_challengers)
+                organisms=host_population.organisms+parasite_population.organisms+hof_challengers,
+                chess_puzzles_inputs=chess_puzzles_inputs)
 
             all_host_results = Fitness.convert_player_scores_to_results_dict(host_population.organisms,
                                                                              parasite_population.organisms+hof_challengers,
@@ -185,7 +225,20 @@ def main():
         hall_of_fame.append(overall_champ)
         print(f"The {hof_champ_str} was added to HoF")
 
+        if Constants.smart_pick_puzzles_to_play:
+            # Determine which chess puzzles will be used to evaluate the next generation. We do this intelligently by
+            # having the species champs from this generation play a lot of games, then selecting (mostly) the most
+            # challenging puzzles (for this generation) to use for evaluating the next one.
+            print(f'Using generation {generation} species champs to pick puzzles for generation {generation+1}...')
+            organisms = []
+            organisms.extend(host_population.get_n_diff_species_champs(8))
+            organisms.extend(parasite_population.get_n_diff_species_champs(8))
+            organisms.extend(np.random.choice(hall_of_fame, 4, replace=False))
+            print(f'Organisms being used for picking next puzzles: {organisms}')
+            chess_puzzles_inputs = get_puzzles_inputs_for_next_generation(organisms)
+
         # Selection and breeding
+        print(f'Beginning selection and breeding for generation {generation}...')
         seeds_from_host = host_population.get_n_diff_species_champs(3)
         seeds_from_parasite = parasite_population.get_n_diff_species_champs(3)
         for population in [host_population, parasite_population]:

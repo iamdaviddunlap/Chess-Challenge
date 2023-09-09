@@ -89,16 +89,14 @@ class UciInteractionBot:
 
 
 if __name__ == "__main__":
-    show_gui = True
+    show_gui = False
 
     current_file_path = os.path.dirname(os.path.abspath(__file__))
 
-    gen_45_hof_addition_fp = 'saved_genomes/hall_of_fame/hof_gen45_2023-09-07__04-21-06/14645.json'
-    gen_50_hof_addition_fp = 'saved_genomes/hall_of_fame/hof_gen50_2023-09-07__16-17-57/15611.json'
-    gen_53_hof_addition_fp = 'saved_genomes/hall_of_fame/hof_gen53_2023-09-07__23-31-18/16385.json'
-    org_id_to_load = '14375'
-    genome_file_path = os.path.join(current_file_path, gen_53_hof_addition_fp)
-                                    # f'saved_genomes/hall_of_fame/hof_gen43_2023-09-06__23-25-23/{org_id_to_load}.json')
+
+    org_id_to_load = '15787'
+    genome_file_path = os.path.join(current_file_path,
+                                    f'saved_genomes/hall_of_fame/hof_gen50_2023-09-08__15-43-13/{org_id_to_load}.json')
     with open(genome_file_path) as f:
         json_data = json.loads(f.read())
     loaded_genome = json_to_genome(json_data)

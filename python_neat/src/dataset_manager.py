@@ -65,17 +65,19 @@ class DatasetManager:
 
         return np.array(self._concentric_circle_dataset, dtype=float)
 
-    def get_chess_puzzle_dataset(self):
+    def get_chess_puzzle_dataset(self, keep_puzzle_id=False):
         raw_dataset_filename = 'datasets/lichess_db_puzzle_raw.csv'
         one_mil_dataset_filename = 'datasets/lichess_db_puzzle_1M.csv'
 
         if self._chess_puzzles_dataset is not None:
-            shuffled_df = self._chess_puzzles_dataset.sample(frac=1)
+            df = self._chess_puzzles_dataset if keep_puzzle_id else self._chess_puzzles_dataset.drop('PuzzleId', axis=1)
+            shuffled_df = df.sample(frac=1)
             return shuffled_df
         if os.path.exists(one_mil_dataset_filename):
             df = pd.read_csv(one_mil_dataset_filename)
-            self._chess_puzzles_dataset = df[['FEN', 'Moves', 'Rating_mod']]
-            shuffled_df = self._chess_puzzles_dataset.sample(frac=1)
+            self._chess_puzzles_dataset = df[['PuzzleId', 'FEN', 'Moves', 'Rating_mod']]
+            df = self._chess_puzzles_dataset if keep_puzzle_id else self._chess_puzzles_dataset.drop('PuzzleId', axis=1)
+            shuffled_df = df.sample(frac=1)
             return shuffled_df
         # Load raw lichess puzzles dataset and take the best 1M puzzles
         target_dataset_size = 1000000  # 1 million
@@ -116,4 +118,5 @@ def plot_concentric_circle_dataset(dataset):
 
 
 if __name__ == '__main__':
-    plot_concentric_circle_dataset(DatasetManager().concentric_circle_dataset())
+    DatasetManager().get_chess_puzzle_dataset(keep_puzzle_id=True)
+    # plot_concentric_circle_dataset(DatasetManager().concentric_circle_dataset())

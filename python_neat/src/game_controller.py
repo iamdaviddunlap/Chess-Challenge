@@ -187,7 +187,11 @@ class GameController:
 
     @staticmethod
     def play_chess_puzzles_singleplayer(args, device="cpu"):
-        player, chess_puzzles_inputs, return_total_score = args
+        if len(args) == 3:
+            player, chess_puzzles_inputs, return_total_score = args
+        else:
+            player, chess_puzzles_inputs = args
+            return_total_score = True
         organism_id = player.organism_id
         player = player.genome
         player.reset_state()

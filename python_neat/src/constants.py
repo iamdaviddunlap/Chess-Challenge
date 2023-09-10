@@ -15,7 +15,8 @@ class Constants:
 
     # Training Parameters
     is_labeled_non_chess_dataset = False  # Only set to true when training on things like XOR or concentric circles
-    smart_pick_puzzles_to_play = True  # Whether or not to intelligently select chess puzzles that are challenging
+    is_chess_adversarial = True
+    smart_pick_puzzles_to_play = False  # Whether or not to intelligently select chess puzzles that are challenging
 
     # Chess Parameters
     num_puzzles_per_game = 100

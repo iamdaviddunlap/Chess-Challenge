@@ -224,6 +224,31 @@ def _bot_move(board):
         binary_board_to_ascii_board(board_to_binary(board))
 
 
+def get_player_material_values(board):
+    piece_values = {
+        chess.PAWN: 1,
+        chess.KNIGHT: 3,
+        chess.BISHOP: 3,
+        chess.ROOK: 5,
+        chess.QUEEN: 9,
+        chess.KING: 0  # usually not assigned a value
+    }
+
+    white_material = 0
+    black_material = 0
+
+    for square in chess.SQUARES:
+        piece = board.piece_at(square)
+        if piece:
+            value = piece_values[piece.piece_type]
+            if piece.color == chess.WHITE:
+                white_material += value
+            else:
+                black_material += value
+
+    return white_material, black_material
+
+
 def main():
     # Initialize a chess board
     board = chess.Board()

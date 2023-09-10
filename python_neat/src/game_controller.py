@@ -17,12 +17,44 @@ class GameController:
     @staticmethod
     def play_game(host, parasite, host_is_white, **kwargs):
         # result = GameController.play_supervised_learning(host, parasite, **kwargs)
-        result = GameController.play_chess_puzzles(host, parasite, **kwargs)
-        return result
+        # result = GameController.play_chess_puzzles(host, parasite, **kwargs)
+        white_player = host if host_is_white else parasite
+        black_player = host if not host_is_white else parasite
+        white_player_score, black_player_score = GameController.play_chess(white_player, black_player)
+        host_score = white_player_score if host_is_white else black_player_score
+        parasite_score = white_player_score if not host_is_white else black_player_score
+        return host_score, parasite_score
 
     @staticmethod
     def play_chess(white_player, black_player):
-        return -1  # TODO implement play_chess
+        board = chess.Board()
+        while not board.is_game_over():
+            player = white_player.genome if board.turn else black_player.genome
+            all_moves_input_arr = GameController.get_model_input_arrs_from_board(board)
+            legal_moves_lst = [x for x in board.legal_moves]
+            best_move_idx, _ = GameController.get_player_best_move(
+                player, all_moves_input_arr, apply_best_activation=True)
+            player_move = legal_moves_lst[best_move_idx]
+            board.push(player_move)
+        if board.is_checkmate():
+            # the player whose turn it is has lost
+            win_points = 3
+            white_player_score = -win_points if board.turn else win_points
+            black_player_score = -white_player_score
+        elif board.is_stalemate() or board.is_insufficient_material():
+            # Award partial points for how much material each player has
+            white_material, black_material = get_player_material_values(board)
+            white_player_score = (white_material - black_material) / (white_material + black_material)
+            white_player_score *= 0.5
+            black_player_score = -white_player_score
+        elif board.is_seventyfive_moves() or board.is_fivefold_repetition():
+            # Award a negative score to both players
+            white_player_score = black_player_score = -1
+        else:
+            print(f'Got unexpected game outcome: {board.outcome()}')
+            white_player_score = black_player_score = -1
+
+        return white_player_score, black_player_score
 
     @staticmethod
     def play_labeled_dataset_single_player(player, dataset, **kwargs):

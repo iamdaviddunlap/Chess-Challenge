@@ -54,21 +54,25 @@ class Fitness:
                 all_host_results = {**all_host_results, **precalced}
             all_game_args.extend(game_args)
 
-        with Pool() as pool:
+        if Constants.half_power:
+            num_processes = 14
+        else:
+            num_processes = 16
+        with Pool(processes=num_processes) as pool:
             for key, result in tqdm(pool.imap(Fitness.play_game_sync, all_game_args), total=len(all_game_args)):
                 original_key = key
-                value = result
-                all_host_results[original_key] = value
+                host_score, parasite_score = result
+                all_host_results[original_key] = host_score
 
                 # Only create precalc_results if we didn't get any - ie the organisms are from the host population
                 if precalc_results is None:
                     # Check if the host is in challengers_for_parasites and update the parasite results
                     host = original_key[0]  # Assuming the host ID is the first element in the key
                     if host in challengers_for_parasites_ids:
-                        new_value = -value
                         new_key = (original_key[1], original_key[0], not original_key[2])
-                        parasite_precalc_results[new_key] = new_value
+                        parasite_precalc_results[new_key] = parasite_score
 
+        print(f'all_host_results: {all_host_results}')
         return all_host_results, parasite_precalc_results
 
     @staticmethod
@@ -125,6 +129,9 @@ class Fitness:
 
     @staticmethod
     def convert_game_result_to_fitness(result):
+        if Constants.is_chess_adversarial:
+            return result
+
         if result == 1:
             return Constants.fitness_reward_win
         elif result == 0:
@@ -175,6 +182,7 @@ class Fitness:
         # Normalize fitnesses
         min_fitness = min(o.fitness for o in host_population.organisms)
         max_fitness = max(o.fitness for o in host_population.organisms)
+        print(f'(before scaling) min_fitness: {min_fitness}, max_fitness: {max_fitness}')
         range_fitness = max(max_fitness - min_fitness, 0.001)
         for organism in host_population.organisms:
             # Normalizing between 0 and 1

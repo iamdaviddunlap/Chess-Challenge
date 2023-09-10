@@ -133,16 +133,16 @@ def get_puzzles_inputs_for_next_generation(organisms):
 
 
 def main():
-    host_population_folder = 'saved_genomes/populations/host_gen55_2023-09-09__01-32-51'
-    parasite_population_folder = 'saved_genomes/populations/parasite_gen55_2023-09-09__01-32-52'
-    hall_of_fame_folder = 'saved_genomes/hall_of_fame/hof_gen54_2023-09-09__01-32-50'
-    puzzle_ids = ['RP6lB', 'TpmU9', 'q9CQu', 'Dfj9i', 'K69RU', 'j0tBu', 'WFGNn', 'Lz4B8', 'C47wT', '7Ioux', '1Aybl', 'CNE3o', 'GrET5', 'zJPMN', 'pfMM3', 'el7fA', 'd7Yfe', 'GP32f', 'hltfP', 'h2PQX', 'LAxna', '1S5XR', 'XeUsD', 'aDYvf', 'JAksK', 'ZyfT6', 'MY8zD', 'mjHOe', 'PnLMe', 'RID09', 'dWqEe', 'SXVYd', '3IZEc', 'cve9w', '4WwfL', 'vdfea', 'vzAOU', 'ZJ9jl', 'ap0OL', 'cVt8p', '3k9PT', 'dNhFY', 'la5tu', 'dixX3', 'SyPsQ', 'hrLd4', 'qBTsv', 'TEzlu', 'mUJUx', 'nZUGn', 'ooBrr', '1aXYD', 'B6lmr', 'xsQJ9', '8k0XI', 'lEnzM', 'VrhWX', 'sWlYk', 'FPHFl', 'qYb6q', 'MFZi0', 'bOdCB', 'X8Zkl', 'qk07d', 'ycXdc', 'E7oEV', '4okfU', 'N1gAN', 'CkAK6', 'LV3pz', 'bv6VF', 't8fd0', 'IEsTu', 'SCL5L', 'zHhFw', 'PE8Ap', 'nEmlf', 's01s2', 'OAXY4', 'zBH9k', '99V5L', 'A5945', 'zIMwh', 'BU9xt', 'a4mM4', 'HCla2', 'V7VfP', 'tAtk0', 'PMTfp', '87U6h', '3E4Oe', 'p3PBs', 'GCBHQ', 'UaDdV', 'IHpAL', 'yQqMn', 'cD6Nm', '3rcun', 'QMrbv', 'XSsvL']
-    starting_generation = 55
+    host_population_folder = 'saved_genomes/populations/host_gen61_2023-09-09__21-08-27'
+    parasite_population_folder = 'saved_genomes/populations/parasite_gen61_2023-09-09__21-08-29'
+    hall_of_fame_folder = 'saved_genomes/hall_of_fame/hof_gen60_2023-09-09__21-08-26'
+    # puzzle_ids = ['RP6lB', 'TpmU9', 'q9CQu', 'Dfj9i', 'K69RU', 'j0tBu', 'WFGNn', 'Lz4B8', 'C47wT', '7Ioux', '1Aybl', 'CNE3o', 'GrET5', 'zJPMN', 'pfMM3', 'el7fA', 'd7Yfe', 'GP32f', 'hltfP', 'h2PQX', 'LAxna', '1S5XR', 'XeUsD', 'aDYvf', 'JAksK', 'ZyfT6', 'MY8zD', 'mjHOe', 'PnLMe', 'RID09', 'dWqEe', 'SXVYd', '3IZEc', 'cve9w', '4WwfL', 'vdfea', 'vzAOU', 'ZJ9jl', 'ap0OL', 'cVt8p', '3k9PT', 'dNhFY', 'la5tu', 'dixX3', 'SyPsQ', 'hrLd4', 'qBTsv', 'TEzlu', 'mUJUx', 'nZUGn', 'ooBrr', '1aXYD', 'B6lmr', 'xsQJ9', '8k0XI', 'lEnzM', 'VrhWX', 'sWlYk', 'FPHFl', 'qYb6q', 'MFZi0', 'bOdCB', 'X8Zkl', 'qk07d', 'ycXdc', 'E7oEV', '4okfU', 'N1gAN', 'CkAK6', 'LV3pz', 'bv6VF', 't8fd0', 'IEsTu', 'SCL5L', 'zHhFw', 'PE8Ap', 'nEmlf', 's01s2', 'OAXY4', 'zBH9k', '99V5L', 'A5945', 'zIMwh', 'BU9xt', 'a4mM4', 'HCla2', 'V7VfP', 'tAtk0', 'PMTfp', '87U6h', '3E4Oe', 'p3PBs', 'GCBHQ', 'UaDdV', 'IHpAL', 'yQqMn', 'cD6Nm', '3rcun', 'QMrbv', 'XSsvL']
+    starting_generation = 61
     # starting_generation = 1
     # host_population_folder = None
     # parasite_population_folder = None
     # hall_of_fame_folder = None
-    # puzzle_ids = None
+    puzzle_ids = None
     max_generations = 500
     chess_puzzles_inputs = None
 
@@ -162,16 +162,16 @@ def main():
     else:
         hall_of_fame = load_hall_of_fame(hall_of_fame_folder)
 
-    if puzzle_ids is not None:
-        puzzles_dataset = DatasetManager().get_chess_puzzle_dataset(keep_puzzle_id=True)
-        puzzles_dataset = puzzles_dataset[puzzles_dataset['PuzzleId'].isin(puzzle_ids)]
-        chess_puzzles_inputs = GameController.get_chess_puzzles_inputs(puzzles_dataset=puzzles_dataset)
+    # if puzzle_ids is not None:
+    #     puzzles_dataset = DatasetManager().get_chess_puzzle_dataset(keep_puzzle_id=True)
+    #     puzzles_dataset = puzzles_dataset[puzzles_dataset['PuzzleId'].isin(puzzle_ids)]
+    #     chess_puzzles_inputs = GameController.get_chess_puzzles_inputs(puzzles_dataset=puzzles_dataset)
 
     # Main evolutionary loop
     for generation in range(starting_generation, max_generations+1):
         gen_start_time = time.time()
 
-        if Constants.is_labeled_non_chess_dataset:
+        if Constants.is_labeled_non_chess_dataset or Constants.is_chess_adversarial:
             challengers_for_hosts = parasite_population.select_challengers(hall_of_fame)
             challengers_for_parasites = host_population.select_challengers(hall_of_fame)
             all_host_results, parasite_precalc_results = Fitness.evaluate_fitness_adversarial_async(

@@ -288,7 +288,7 @@ class Genome:
 
         return genetic_difference
 
-    def activate(self, input_activations, max_iterations=10, simulate_only=False):
+    def activate(self, input_activations, max_iterations=5, simulate_only=False):
         if simulate_only:
             old_activations = np.copy(self.activations)
 
@@ -310,7 +310,8 @@ class Genome:
                     self.connection_matrix[:, phen_id, 1][gates_mask].astype(np.longlong)]
                 incoming_activation = np.sum(incoming_activations)
                 new_activation = new_activations[phen_id] + incoming_activation + node.bias
-                new_activation = np.clip(new_activation, -1e12, 1e12)
+                new_activation = np.maximum(new_activation, -1e12)
+                new_activation = np.minimum(new_activation, 1e12)
                 # Apply activation function
                 new_activations[phen_id] = ACTIVATION_MAPPING[node.activation_function](new_activation)
 

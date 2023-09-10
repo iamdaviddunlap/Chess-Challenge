@@ -15,18 +15,18 @@ random.seed(Constants.random_seed)
 class GameController:
 
     @staticmethod
-    def play_game(host, parasite, host_is_white, **kwargs):
+    def play_game(host, parasite, host_is_white, print_game_moves=False, **kwargs):
         # result = GameController.play_supervised_learning(host, parasite, **kwargs)
         # result = GameController.play_chess_puzzles(host, parasite, **kwargs)
         white_player = host if host_is_white else parasite
         black_player = host if not host_is_white else parasite
-        white_player_score, black_player_score = GameController.play_chess(white_player, black_player)
+        white_player_score, black_player_score = GameController.play_chess(white_player, black_player, print_game_moves, **kwargs)
         host_score = white_player_score if host_is_white else black_player_score
         parasite_score = white_player_score if not host_is_white else black_player_score
         return host_score, parasite_score
 
     @staticmethod
-    def play_chess(white_player, black_player):
+    def play_chess(white_player, black_player, print_game_moves):
         board = chess.Board()
         while not board.is_game_over():
             player = white_player.genome if board.turn else black_player.genome
@@ -54,6 +54,10 @@ class GameController:
             print(f'Got unexpected game outcome: {board.outcome()}')
             white_player_score = black_player_score = -1
 
+        if print_game_moves:
+            game_moves = ' '.join([m.uci() for m in board.move_stack])
+            print(f'white_player_score: {white_player_score}, black_player_score: {black_player_score}, '
+                  f'game_moves: {game_moves}')
         return white_player_score, black_player_score
 
     @staticmethod
@@ -127,8 +131,8 @@ class GameController:
         in the most activated output.
         """
         old_internal_activations = np.copy(player.activations)
-        best_activation = -10000000
-        best_move_idx = None
+        best_activation = float('-inf')
+        best_move_idx = 0
         best_internal_activations = old_internal_activations
         all_input_results = dict()
         for i in range(len(all_moves_input_arr)):

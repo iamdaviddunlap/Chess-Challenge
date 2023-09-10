@@ -217,12 +217,11 @@ def main():
             print(f"Generation {generation}: host champion loss: {host_loss}")
             print(f"Generation {generation}: parasite champion loss: {parasite_loss}")
 
-        host_white_result = GameController.play_game(host_champ, parasite_champ, host_is_white=True)
-        host_black_result = GameController.play_game(host_champ, parasite_champ, host_is_white=False)
-        champ_result_sum = host_white_result + host_black_result
-        if champ_result_sum > 0:
+        host_res_1, parasite_res_1 = GameController.play_game(host_champ, parasite_champ, host_is_white=True, print_game_moves=True)
+        host_res_2, parasite_res_2 = GameController.play_game(host_champ, parasite_champ, host_is_white=False, print_game_moves=True)
+        if (host_res_1 + host_res_2) > (parasite_res_1 + parasite_res_2):
             overall_champ = host_champ
-        elif champ_result_sum < 0:
+        elif (host_res_1 + host_res_2) < (parasite_res_1 + parasite_res_2):
             overall_champ = parasite_champ
         else:
             overall_champ = host_champ if random.random() < 0.5 else parasite_champ

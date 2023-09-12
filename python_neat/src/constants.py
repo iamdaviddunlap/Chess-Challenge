@@ -68,6 +68,7 @@ class Constants:
 
     # Breeding Settings
     superchamp_offspring = 5
+    num_random_children = 3
     killer_superchamp_z_score_req = 5.0
     killer_superchamp_percent = 0.4
     mutate_only_prob = 0.25

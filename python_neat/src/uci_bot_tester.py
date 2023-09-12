@@ -94,9 +94,9 @@ if __name__ == "__main__":
     current_file_path = os.path.dirname(os.path.abspath(__file__))
 
 
-    org_id_to_load = '17709'
+    org_id_to_load = '18899'
     genome_file_path = os.path.join(current_file_path,
-                                    f'saved_genomes/hall_of_fame/hof_gen60_2023-09-09__21-08-26/{org_id_to_load}.json')
+                                    f'saved_genomes/hall_of_fame/hof_gen66_2023-09-11__18-27-08/{org_id_to_load}.json')
     with open(genome_file_path) as f:
         json_data = json.loads(f.read())
     loaded_genome = json_to_genome(json_data)

@@ -43,13 +43,20 @@ class GameController:
             black_player_score = -white_player_score
         elif board.is_stalemate() or board.is_insufficient_material():
             # Award partial points for how much material each player has
+            # The scores will range from -0.5 to +0.5
             white_material, black_material = get_player_material_values(board)
-            white_player_score = (white_material - black_material) / (white_material + black_material)
-            white_player_score *= 0.5
-            black_player_score = -white_player_score
+            material_diff = white_material - black_material
+            # we are dividing by 78 because this is 2 * the max material score (39)
+            black_player_score = -0.5 * material_diff / 78.0
+            white_player_score = 0.5 * material_diff / 78.0
         elif board.is_seventyfive_moves() or board.is_fivefold_repetition():
-            # Award a negative score to both players
-            white_player_score = black_player_score = -1
+            # Award a negative score to both players, scaled by which player has the most material
+            # The scores will range from -1.5 to -0.5
+            white_material, black_material = get_player_material_values(board)
+            material_diff = white_material - black_material
+            # we are dividing by 78 because this is 2 * the max material score (39)
+            black_player_score = -1 - material_diff / 78.0
+            white_player_score = -1 + material_diff / 78.0
         else:
             print(f'Got unexpected game outcome: {board.outcome()}')
             white_player_score = black_player_score = -1

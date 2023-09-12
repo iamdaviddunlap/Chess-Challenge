@@ -73,7 +73,11 @@ def load_population(population_folder):
                 json_data = json.loads(f.read())
             loaded_genome = json_to_genome(json_data)
             # Extract organism_id and fitness from the filename
-            organism_id, fitness = [x for x in '.'.join(filename.split('.')[:-1]).split('_')]
+            if '_' in filename:
+                organism_id, fitness = [x for x in '.'.join(filename.split('.')[:-1]).split('_')]
+            else:
+                organism_id = filename.split('.')[:-1][0]
+                fitness = -1
             organism_id = int(organism_id)
             fitness = float(fitness)
             new_organism = Organism(loaded_genome, organism_id=organism_id)
@@ -133,11 +137,11 @@ def get_puzzles_inputs_for_next_generation(organisms):
 
 
 def main():
-    host_population_folder = 'saved_genomes/populations/host_gen61_2023-09-09__21-08-27'
-    parasite_population_folder = 'saved_genomes/populations/parasite_gen61_2023-09-09__21-08-29'
-    hall_of_fame_folder = 'saved_genomes/hall_of_fame/hof_gen60_2023-09-09__21-08-26'
+    host_population_folder = 'saved_genomes/custom_created_for_chess/host'
+    parasite_population_folder = 'saved_genomes/custom_created_for_chess/parasite'
+    hall_of_fame_folder = None
     # puzzle_ids = ['RP6lB', 'TpmU9', 'q9CQu', 'Dfj9i', 'K69RU', 'j0tBu', 'WFGNn', 'Lz4B8', 'C47wT', '7Ioux', '1Aybl', 'CNE3o', 'GrET5', 'zJPMN', 'pfMM3', 'el7fA', 'd7Yfe', 'GP32f', 'hltfP', 'h2PQX', 'LAxna', '1S5XR', 'XeUsD', 'aDYvf', 'JAksK', 'ZyfT6', 'MY8zD', 'mjHOe', 'PnLMe', 'RID09', 'dWqEe', 'SXVYd', '3IZEc', 'cve9w', '4WwfL', 'vdfea', 'vzAOU', 'ZJ9jl', 'ap0OL', 'cVt8p', '3k9PT', 'dNhFY', 'la5tu', 'dixX3', 'SyPsQ', 'hrLd4', 'qBTsv', 'TEzlu', 'mUJUx', 'nZUGn', 'ooBrr', '1aXYD', 'B6lmr', 'xsQJ9', '8k0XI', 'lEnzM', 'VrhWX', 'sWlYk', 'FPHFl', 'qYb6q', 'MFZi0', 'bOdCB', 'X8Zkl', 'qk07d', 'ycXdc', 'E7oEV', '4okfU', 'N1gAN', 'CkAK6', 'LV3pz', 'bv6VF', 't8fd0', 'IEsTu', 'SCL5L', 'zHhFw', 'PE8Ap', 'nEmlf', 's01s2', 'OAXY4', 'zBH9k', '99V5L', 'A5945', 'zIMwh', 'BU9xt', 'a4mM4', 'HCla2', 'V7VfP', 'tAtk0', 'PMTfp', '87U6h', '3E4Oe', 'p3PBs', 'GCBHQ', 'UaDdV', 'IHpAL', 'yQqMn', 'cD6Nm', '3rcun', 'QMrbv', 'XSsvL']
-    starting_generation = 61
+    starting_generation = 63
     # starting_generation = 1
     # host_population_folder = None
     # parasite_population_folder = None
